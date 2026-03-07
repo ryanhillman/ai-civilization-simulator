@@ -1,0 +1,48 @@
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+    )
+
+    # Database
+    db_host: str = "localhost"
+    db_port: int = 5432
+    db_user: str = "civ_user"
+    db_password: str = "civ_pass"
+    db_name: str = "civ_db"
+
+    # Anthropic
+    anthropic_api_key: str = ""
+
+    # App
+    app_env: str = "development"
+    log_level: str = "INFO"
+
+    # Simulation
+    autoplay_max_turns: int = 20
+
+    @property
+    def database_url(self) -> str:
+        return (
+            f"postgresql+asyncpg://{self.db_user}:{self.db_password}"
+            f"@{self.db_host}:{self.db_port}/{self.db_name}"
+        )
+
+    @property
+    def database_url_sync(self) -> str:
+        """Sync URL for Alembic migrations."""
+        return (
+            f"postgresql+psycopg2://{self.db_user}:{self.db_password}"
+            f"@{self.db_host}:{self.db_port}/{self.db_name}"
+        )
+
+    @property
+    def is_development(self) -> bool:
+        return self.app_env == "development"
+
+
+settings = Settings()
