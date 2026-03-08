@@ -21,7 +21,6 @@ export type EventType =
   | "harvest"
   | "rest"
   | "theft";
-export type Visibility = "public" | "private";
 
 // ---------------------------------------------------------------------------
 // World
@@ -42,6 +41,13 @@ export interface World {
 // Agent
 // ---------------------------------------------------------------------------
 
+export interface Inventory {
+  food: number;
+  coin: number;
+  wood: number;
+  medicine: number;
+}
+
 export interface PersonalityTraits {
   courage: number;
   greed: number;
@@ -56,11 +62,6 @@ export interface Goal {
   priority: number;
 }
 
-export interface InventoryItem {
-  resource_type: ResourceType;
-  quantity: number;
-}
-
 export interface AgentSummary {
   id: number;
   name: string;
@@ -71,23 +72,11 @@ export interface AgentSummary {
   hunger: number;
 }
 
-export interface AgentDetail extends AgentSummary {
-  personality_traits: PersonalityTraits;
-  goals: Goal[];
-  inventory: InventoryItem[];
-  relationships: Relationship[];
-  recent_memories: Memory[];
-}
-
-// ---------------------------------------------------------------------------
-// Relationship
-// ---------------------------------------------------------------------------
-
 export interface Relationship {
   id: number;
   source_agent_id: number;
   target_agent_id: number;
-  target_name?: string; // joined/resolved in response
+  target_name?: string;
   trust: number;
   warmth: number;
   respect: number;
@@ -96,10 +85,6 @@ export interface Relationship {
   alliance_active: boolean;
   grudge_active: boolean;
 }
-
-// ---------------------------------------------------------------------------
-// Memory
-// ---------------------------------------------------------------------------
 
 export interface Memory {
   id: number;
@@ -111,8 +96,74 @@ export interface Memory {
   emotional_weight: number;
   related_agent_id: number | null;
   related_agent_name?: string;
-  visibility: Visibility;
+  visibility: string;
   created_at: string;
+}
+
+export interface AgentDetail extends AgentSummary {
+  personality_traits: PersonalityTraits;
+  goals: Goal[];
+  inventory: Inventory;
+  relationships: Relationship[];
+  recent_memories: Memory[];
+}
+
+// ---------------------------------------------------------------------------
+// Simulation — pressure + turn result
+// ---------------------------------------------------------------------------
+
+export interface AgentPressure {
+  agent_id: number;
+  hunger_pressure: number;
+  resource_pressure: number;
+  sickness_pressure: number;
+  social_pressure: number;
+  memory_pressure: number;
+  total: number;
+  top_reasons: string[];
+}
+
+export interface ResolvedAction {
+  agent_id: number;
+  action_type: string;
+  succeeded: boolean;
+  outcome: string;
+  details: Record<string, unknown>;
+}
+
+export interface TurnEventDomain {
+  world_id: number;
+  turn_number: number;
+  event_type: string;
+  description: string;
+  agent_ids: number[];
+  details: Record<string, unknown>;
+}
+
+export interface WorldEvent {
+  event_type: string;
+  description: string;
+  affected_agent_ids: number[];
+  modifiers: Record<string, unknown>;
+}
+
+export interface AgentTurnSummary extends AgentSummary {
+  inventory: Inventory;
+  pressure: AgentPressure | null;
+}
+
+export interface TurnResult {
+  world_id: number;
+  turn_number: number;
+  current_day: number;
+  current_season: Season;
+  weather: string;
+  agents: AgentTurnSummary[];
+  resolved_actions: ResolvedAction[];
+  events: TurnEventDomain[];
+  world_events: WorldEvent[];
+  pressures: AgentPressure[];
+  summary: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -129,56 +180,6 @@ export interface TurnEvent {
   agent_ids: number[];
   details: Record<string, unknown>;
   created_at: string;
-}
-
-// ---------------------------------------------------------------------------
-// Simulation
-// ---------------------------------------------------------------------------
-
-export interface TurnResult {
-  world: World;
-  events: TurnEvent[];
-  turn_number: number;
-}
-
-export interface RunNTurnsRequest {
-  turns: number;
-}
-
-export interface AutoplayRequest {
-  max_turns: number;
-}
-
-// ---------------------------------------------------------------------------
-// Ask-an-agent
-// ---------------------------------------------------------------------------
-
-export interface AskAgentRequest {
-  question: string;
-}
-
-export interface AskAgentResponse {
-  agent_id: number;
-  agent_name: string;
-  answer: string;
-  turn_number: number;
-}
-
-// ---------------------------------------------------------------------------
-// Events
-// ---------------------------------------------------------------------------
-
-export interface EventDefinition {
-  type: EventType;
-  label: string;
-  description: string;
-  params_schema: Record<string, unknown> | null;
-}
-
-export interface TriggerEventRequest {
-  event_type: EventType;
-  world_id: number;
-  params?: Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------

@@ -25,15 +25,15 @@ app.add_middleware(
 )
 
 # ---------------------------------------------------------------------------
-# Routes — registered here as they are implemented in later phases
+# Routes
 # ---------------------------------------------------------------------------
 
-# from app.api.routes import world, simulation, agents, timeline, events
-# app.include_router(world.router, prefix="/api/world", tags=["world"])
-# app.include_router(simulation.router, prefix="/api/simulation", tags=["simulation"])
-# app.include_router(agents.router, prefix="/api/agents", tags=["agents"])
-# app.include_router(timeline.router, prefix="/api/timeline", tags=["timeline"])
-# app.include_router(events.router, prefix="/api/events", tags=["events"])
+from app.api.routes import agents, simulation, timeline, worlds  # noqa: E402
+
+app.include_router(worlds.router, prefix="/api/worlds", tags=["worlds"])
+app.include_router(simulation.router, prefix="/api/worlds", tags=["simulation"])
+app.include_router(agents.router, prefix="/api/worlds", tags=["agents"])
+app.include_router(timeline.router, prefix="/api/worlds", tags=["timeline"])
 
 
 # ---------------------------------------------------------------------------

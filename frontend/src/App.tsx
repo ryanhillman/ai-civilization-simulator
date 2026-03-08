@@ -1,11 +1,28 @@
-import { useQuery } from "@tanstack/react-query";
-import { systemApi } from "@/api/client";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { worldApi } from "@/api/client";
+import type { TurnResult, World } from "@/types";
+import AgentPanel from "@/components/AgentPanel";
+import TimelinePanel from "@/components/TimelinePanel";
+import WorldPanel from "@/components/WorldPanel";
 
-export default function App() {
-  const { data: health, isError } = useQuery({
-    queryKey: ["health"],
-    queryFn: systemApi.health,
-    retry: false,
+// ---------------------------------------------------------------------------
+// World selector / creator
+// ---------------------------------------------------------------------------
+
+function WorldSelector({ onSelect }: { onSelect: (w: World) => void }) {
+  const qc = useQueryClient();
+  const { data: worlds, isLoading } = useQuery({
+    queryKey: ["worlds"],
+    queryFn: worldApi.list,
+  });
+
+  const create = useMutation({
+    mutationFn: () => worldApi.create("Ashenvale"),
+    onSuccess: (w) => {
+      qc.invalidateQueries({ queryKey: ["worlds"] });
+      onSelect(w);
+    },
   });
 
   return (
@@ -19,23 +36,113 @@ export default function App() {
         </p>
       </div>
 
-      <div className="panel px-6 py-4 text-sm text-center">
-        {health ? (
-          <span className="text-green-400">
-            Backend connected &mdash; env: <strong>{health.env}</strong>
-          </span>
-        ) : isError ? (
-          <span className="text-red-400">
-            Backend unreachable &mdash; is the FastAPI server running?
-          </span>
+      <div className="panel px-6 py-5 w-80">
+        <p className="text-sm font-semibold text-stone-300 mb-3">Select World</p>
+        {isLoading ? (
+          <p className="text-xs text-stone-500">Loading worlds...</p>
+        ) : worlds && worlds.length > 0 ? (
+          <div className="space-y-2">
+            {worlds.map((w) => (
+              <button
+                key={w.id}
+                className="w-full text-left px-3 py-2 rounded bg-stone-800 hover:bg-stone-700 transition-colors"
+                onClick={() => onSelect(w)}
+              >
+                <div className="text-sm text-stone-200">{w.name}</div>
+                <div className="text-xs text-stone-500">
+                  Turn {w.current_turn} · {w.current_season}
+                </div>
+              </button>
+            ))}
+          </div>
         ) : (
-          <span className="text-stone-500">Checking backend&hellip;</span>
+          <p className="text-xs text-stone-500 mb-3">No worlds yet.</p>
         )}
-      </div>
 
-      <p className="text-stone-600 text-xs">
-        Dashboard UI coming in Phase 5.
-      </p>
+        <button
+          className="btn-primary w-full mt-3 text-sm"
+          onClick={() => create.mutate()}
+          disabled={create.isPending}
+        >
+          {create.isPending ? "Creating..." : "New World (Ashenvale)"}
+        </button>
+      </div>
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Main dashboard
+// ---------------------------------------------------------------------------
+
+function Dashboard({ world, onBack }: { world: World; onBack: () => void }) {
+  const qc = useQueryClient();
+  const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
+
+  // Live world data (refreshed after turns)
+  const { data: liveWorld } = useQuery({
+    queryKey: ["world", world.id],
+    queryFn: () => worldApi.get(world.id),
+    initialData: world,
+  });
+
+  // Last turn result drives timeline and agent summaries
+  const lastResult = qc.getQueryData<TurnResult>(["lastResult", world.id]) ?? null;
+
+  return (
+    <div className="h-screen flex flex-col overflow-hidden">
+      {/* Top bar */}
+      <header className="shrink-0 border-b border-stone-800 px-4 py-2 flex items-center gap-4 bg-stone-950">
+        <button
+          className="btn-secondary text-xs"
+          onClick={onBack}
+        >
+          Worlds
+        </button>
+        <h1 className="text-sm font-semibold text-stone-300">
+          {liveWorld?.name ?? world.name}
+        </h1>
+        <span className="text-xs text-stone-600">
+          Turn {liveWorld?.current_turn ?? world.current_turn}
+        </span>
+      </header>
+
+      {/* 3-column layout */}
+      <div className="flex-1 grid grid-cols-[240px_1fr_280px] gap-3 p-3 overflow-hidden">
+        <WorldPanel
+          worldId={world.id}
+          world={liveWorld ?? world}
+          lastResult={lastResult}
+          onSelectAgent={setSelectedAgentId}
+          selectedAgentId={selectedAgentId}
+          onResetWorld={() => setSelectedAgentId(null)}
+        />
+
+        <TimelinePanel
+          worldId={world.id}
+          lastResult={lastResult}
+          onSelectAgent={setSelectedAgentId}
+        />
+
+        <AgentPanel
+          worldId={world.id}
+          agentId={selectedAgentId}
+          lastResult={lastResult}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Root
+// ---------------------------------------------------------------------------
+
+export default function App() {
+  const [activeWorld, setActiveWorld] = useState<World | null>(null);
+
+  if (activeWorld) {
+    return <Dashboard world={activeWorld} onBack={() => setActiveWorld(null)} />;
+  }
+  return <WorldSelector onSelect={setActiveWorld} />;
 }
