@@ -23,7 +23,7 @@ HUNGER_INCREASE_PER_TURN = 0.15
 SICKNESS_HUNGER_MULTIPLIER = 1.3
 
 # Daily food consumption by profession (units per turn)
-_FOOD_CONSUMPTION: dict[str, float] = {
+FOOD_CONSUMPTION: dict[str, float] = {
     "farmer": 0.8,
     "blacksmith": 1.2,
     "merchant": 1.0,
@@ -37,7 +37,7 @@ def refresh_agent(agent: AgentState) -> AgentState:
     if not agent.is_alive:
         return agent
 
-    consumption = _FOOD_CONSUMPTION.get(agent.profession.value, 1.0)
+    consumption = FOOD_CONSUMPTION.get(agent.profession.value, 1.0)
     if agent.is_sick:
         consumption *= SICKNESS_HUNGER_MULTIPLIER
 

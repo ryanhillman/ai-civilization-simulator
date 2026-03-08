@@ -18,6 +18,10 @@ One-turn:
 
 Multi-turn (feeds each result's world_state back as the next input):
     results = runner.run_turns(world, n=10)
+
+Phase 3: TurnResult now includes pressures (per-agent pressure breakdown)
+and world_events (events that fired this turn) for debug output and
+future LLM context enrichment.
 """
 from __future__ import annotations
 
@@ -79,6 +83,8 @@ class TurnRunner:
             resolved_actions=ctx.resolved_actions,
             events=ctx.events,
             memories=ctx.memories,
+            pressures=ctx.pressures,
+            world_events=ctx.world_events,
             summary=summary,
         )
 

@@ -6,7 +6,14 @@ All fixtures are pure domain objects — no DB, no SQLAlchemy.
 import pytest
 
 from app.models.db import Profession, Season
-from app.simulation.types import AgentState, InventorySnapshot, WorldState
+from app.simulation.types import (
+    AgentState,
+    InventorySnapshot,
+    MemoryRecord,
+    RelationshipState,
+    RumorRecord,
+    WorldState,
+)
 
 
 def make_agent_state(
@@ -24,6 +31,7 @@ def make_agent_state(
     medicine: float = 2.0,
     goals: list | None = None,
     traits: dict | None = None,
+    recent_memories: list[MemoryRecord] | None = None,
 ) -> AgentState:
     return AgentState(
         id=agent_id,
@@ -34,9 +42,12 @@ def make_agent_state(
         is_alive=is_alive,
         is_sick=is_sick,
         hunger=hunger,
-        personality_traits=traits or {"courage": 0.5, "greed": 0.3, "warmth": 0.5, "cunning": 0.5, "piety": 0.3},
+        personality_traits=traits or {
+            "courage": 0.5, "greed": 0.3, "warmth": 0.5, "cunning": 0.5, "piety": 0.3
+        },
         goals=goals or [],
         inventory=InventorySnapshot(food=food, coin=coin, wood=wood, medicine=medicine),
+        recent_memories=recent_memories or [],
     )
 
 
@@ -47,6 +58,7 @@ def make_world_state(
     season: Season = Season.spring,
     weather: str = "clear",
     agents: list[AgentState] | None = None,
+    relationships: list[RelationshipState] | None = None,
 ) -> WorldState:
     return WorldState(
         id=world_id,
@@ -56,6 +68,7 @@ def make_world_state(
         current_season=season,
         weather=weather,
         agents=agents or [],
+        relationships=relationships or [],
     )
 
 
@@ -99,6 +112,17 @@ def blacksmith() -> AgentState:
         profession=Profession.blacksmith,
         goals=[{"type": "produce", "target": "tools", "priority": 1}],
         wood=15.0,
+    )
+
+
+@pytest.fixture
+def soldier() -> AgentState:
+    return make_agent_state(
+        agent_id=5,
+        name="Soldier",
+        profession=Profession.soldier,
+        goals=[{"type": "protect", "target": "village", "priority": 1}],
+        traits={"courage": 0.9, "greed": 0.2, "warmth": 0.3, "cunning": 0.4, "piety": 0.3},
     )
 
 

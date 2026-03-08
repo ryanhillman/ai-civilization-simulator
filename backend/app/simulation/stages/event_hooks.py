@@ -2,7 +2,9 @@
 Stage 5 — Event Hooks
 
 Converts resolved actions into TurnEventRecord entries.
-Only notable actions become events (rest is suppressed).
+Only notable actions become events (rest and pray are suppressed).
+
+Phase 3 additions: trade_food, steal_food mapped to appropriate event types.
 
 Extension points:
 - Economy engine: inject market-crash / shortage events
@@ -21,6 +23,8 @@ _ACTION_TO_EVENT_TYPE: dict[str, EventType] = {
     "harvest_food":  EventType.harvest,
     "craft_tools":   EventType.trade,
     "trade_goods":   EventType.trade,
+    "trade_food":    EventType.trade,
+    "steal_food":    EventType.theft,
     "heal_self":     EventType.sickness,
     "heal_agent":    EventType.sickness,
     "pray":          EventType.rest,
@@ -28,7 +32,7 @@ _ACTION_TO_EVENT_TYPE: dict[str, EventType] = {
     "patrol":        EventType.rest,
 }
 
-# Actions that are too mundane to surface as timeline events
+# Actions too mundane to surface as timeline events
 _SILENT_ACTIONS = {"rest", "pray", "patrol"}
 
 
@@ -42,12 +46,23 @@ def _action_to_event(
     event_type = _ACTION_TO_EVENT_TYPE.get(action.action_type)
     if event_type is None:
         return None
+
+    # Build agent_ids — include target for theft and trade
+    agent_ids = [action.agent_id]
+    target_id = (
+        action.details.get("buyer_id")
+        or action.details.get("victim_id")
+        or action.details.get("healed_agent_id")
+    )
+    if target_id and target_id not in agent_ids:
+        agent_ids.append(target_id)
+
     return TurnEventRecord(
         world_id=world_id,
         turn_number=turn,
         event_type=event_type,
         description=f"Agent {action.agent_id} {action.outcome}.",
-        agent_ids=[action.agent_id],
+        agent_ids=agent_ids,
         details=action.details,
     )
 

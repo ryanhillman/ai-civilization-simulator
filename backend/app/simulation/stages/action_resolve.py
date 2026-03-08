@@ -4,21 +4,36 @@ Stage 4 — Action Resolution
 For each living agent: select best opportunity → apply deterministic effects
 → produce a ResolvedAction and update agent state.
 
-Selection logic:
-- Iterate agent.goals sorted by priority.
-- Match the goal type to a preferred action list.
-- Pick the first matching opportunity.
-- Fall back to the first non-rest opportunity, then rest.
+Selection logic (Phase 3)
+--------------------------
+Normal mode (total pressure < 2.5):
+  1. Iterate goals sorted by (priority ASC, original_index ASC).
+  2. For each goal, pick the highest-scored matching opportunity.
+  3. Fallback: highest-scored non-rest opportunity, then rest.
 
-Extension point (Phase 6+):
-- LLM-driven selection: replace _select_action() with an async call that
-  receives the agent's context and returns a chosen action_type.
-  The resolution logic (_resolve) stays deterministic.
+Survival mode (total pressure >= 2.5):
+  Score becomes the primary selector — the agent acts on whatever the
+  pressure system rates most urgent, overriding stated goals. This produces
+  emergent desperate behaviour (stealing, aggressive trading) when multiple
+  pressure domains are simultaneously elevated.
+
+Multi-agent side effects
+------------------------
+heal_agent   → target marked not-sick after all actions resolved
+trade_food   → buyer inventory updated (food ↑, coin ↓) after all resolved
+steal_food   → victim inventory updated (food ↓) after all resolved
+
+Extension point (Phase 6+)
+---------------------------
+Replace _select_action() with an async LLM call that receives the agent's
+scored opportunity list and pressure profile, then returns a chosen action.
+The resolution logic (_resolve) stays deterministic regardless.
 """
 from __future__ import annotations
 
 from app.enums import ResourceType
 from app.simulation.types import (
+    AgentPressure,
     AgentState,
     InventorySnapshot,
     Opportunity,
@@ -31,7 +46,7 @@ from app.simulation.types import (
 _GOAL_ACTION_MAP: dict[str, list[str]] = {
     "produce":    ["harvest_food", "craft_tools"],
     "heal":       ["heal_agent", "heal_self"],
-    "trade":      ["trade_goods"],
+    "trade":      ["trade_goods", "trade_food"],
     "protect":    ["patrol"],
     "maintain":   ["bless_village"],
     "tend":       ["pray"],
@@ -46,28 +61,37 @@ _GOAL_ACTION_MAP: dict[str, list[str]] = {
 # ---------------------------------------------------------------------------
 
 
-def _select_action(agent: AgentState, opps: list[Opportunity]) -> Opportunity:
+def _select_action(
+    agent: AgentState,
+    opps: list[Opportunity],
+    pressure: AgentPressure | None = None,
+) -> Opportunity:
     """
     Choose the best available opportunity for this agent.
 
-    Selection algorithm:
-    1. Filter opportunities to those belonging to this agent.
-    2. Iterate goals sorted by (priority ASC, original_list_index ASC).
-       Tie-break rule: when two goals share the same priority value, the one
-       appearing earlier in the agent's goals list wins. This is made explicit
-       via the secondary sort key rather than relying on Python's stable-sort
-       side effect.
-    3. For each goal, try every preferred action type in order; pick the first
-       matching opportunity.
-    4. Fallback: first non-rest opportunity, then rest.
+    Signature accepts an optional pressure argument so Phase 2 callers
+    (existing tests) work unchanged while Phase 3 passes pressure.
 
-    Extension point: replace with LLM call in Phase 6.
+    Survival mode: when total pressure >= 2.5, score is the primary
+    selector — stated goals are overridden by urgency.
+
+    Normal mode:
+      1. Filter to this agent's opportunities.
+      2. Iterate goals sorted by (priority ASC, original_index ASC).
+         Tie-break rule: earlier in goals list wins (explicit sort key,
+         not relying on Python stable-sort side effect).
+      3. For each goal, pick the highest-scored matching opportunity.
+      4. Fallback: highest-scored non-rest, then rest.
     """
     agent_opps = [o for o in opps if o.agent_id == agent.id]
     if not agent_opps:
-        return Opportunity(agent_id=agent.id, action_type="rest")
+        return Opportunity(agent_id=agent.id, action_type="rest", score=0.0)
 
-    # Explicit tie-break: (priority, original index) — never depends on sort stability alone.
+    # Survival mode: pressure overrides goals
+    if pressure is not None and pressure.total >= 2.5:
+        return max(agent_opps, key=lambda o: o.score)
+
+    # Normal mode: goal-driven selection with score as tie-breaker
     sorted_goals = [
         g for _, g in sorted(
             enumerate(agent.goals),
@@ -77,14 +101,15 @@ def _select_action(agent: AgentState, opps: list[Opportunity]) -> Opportunity:
 
     for goal in sorted_goals:
         preferred = _GOAL_ACTION_MAP.get(goal.get("type", ""), [])
-        for action_type in preferred:
-            match = next((o for o in agent_opps if o.action_type == action_type), None)
-            if match:
-                return match
+        candidates = [o for o in agent_opps if o.action_type in preferred]
+        if candidates:
+            return max(candidates, key=lambda o: o.score)
 
-    # Fallback: first non-rest opportunity, or rest
+    # Fallback: highest-scored non-rest, or rest
     non_rest = [o for o in agent_opps if o.action_type != "rest"]
-    return non_rest[0] if non_rest else agent_opps[0]
+    if non_rest:
+        return max(non_rest, key=lambda o: o.score)
+    return agent_opps[0]
 
 
 # ---------------------------------------------------------------------------
@@ -103,7 +128,7 @@ def _resolve(
 
     if action == "harvest_food":
         yield_base = meta.get("yield_base", 3.0)
-        # Warmth personality boosts yield slightly (calm, patient farming)
+        # Warmth personality boosts yield (calm, patient farming)
         bonus = round(agent.personality_traits.get("warmth", 0.5) * 0.5, 2)
         food_gained = round(yield_base + bonus, 2)
         inv = inv.adjust(ResourceType.food, food_gained)
@@ -147,6 +172,45 @@ def _resolve(
             agent.model_copy(update={"inventory": inv}),
         )
 
+    if action == "trade_food":
+        # Seller transfers food and receives coin.
+        # Buyer inventory is updated as a side-effect in resolve_actions().
+        food_amount = meta.get("food_amount", 2.0)
+        price = meta.get("price", 1.5)
+        buyer_id = meta.get("buyer_id") or opp.target_agent_id
+        inv = inv.adjust(ResourceType.food, -food_amount)
+        inv = inv.adjust(ResourceType.coin, price)
+        return (
+            ResolvedAction(
+                agent_id=agent.id,
+                action_type=action,
+                outcome=f"sold {food_amount} food to agent {buyer_id} for {price} coin",
+                details={
+                    "food_sold": food_amount,
+                    "coin_received": price,
+                    "buyer_id": buyer_id,
+                },
+            ),
+            agent.model_copy(update={"inventory": inv}),
+        )
+
+    if action == "steal_food":
+        steal_amount = meta.get("steal_amount", 2.0)
+        target_id = meta.get("target_id") or opp.target_agent_id
+        inv = inv.adjust(ResourceType.food, steal_amount)
+        return (
+            ResolvedAction(
+                agent_id=agent.id,
+                action_type=action,
+                outcome=f"stole {steal_amount} food from agent {target_id}",
+                details={
+                    "food_stolen": steal_amount,
+                    "victim_id": target_id,
+                },
+            ),
+            agent.model_copy(update={"inventory": inv}),
+        )
+
     if action == "heal_self":
         medicine_cost = meta.get("medicine_cost", 1.0)
         inv = inv.adjust(ResourceType.medicine, -medicine_cost)
@@ -177,10 +241,8 @@ def _resolve(
     if action == "pray":
         return (
             ResolvedAction(
-                agent_id=agent.id,
-                action_type=action,
-                outcome="prayed at the shrine",
-                details={},
+                agent_id=agent.id, action_type=action,
+                outcome="prayed at the shrine", details={},
             ),
             agent,
         )
@@ -188,10 +250,8 @@ def _resolve(
     if action == "bless_village":
         return (
             ResolvedAction(
-                agent_id=agent.id,
-                action_type=action,
-                outcome="blessed the village",
-                details={},
+                agent_id=agent.id, action_type=action,
+                outcome="blessed the village", details={},
             ),
             agent,
         )
@@ -199,10 +259,8 @@ def _resolve(
     if action == "patrol":
         return (
             ResolvedAction(
-                agent_id=agent.id,
-                action_type=action,
-                outcome="patrolled the village perimeter",
-                details={},
+                agent_id=agent.id, action_type=action,
+                outcome="patrolled the village perimeter", details={},
             ),
             agent,
         )
@@ -210,10 +268,8 @@ def _resolve(
     # rest (default fallback)
     return (
         ResolvedAction(
-            agent_id=agent.id,
-            action_type="rest",
-            outcome="rested",
-            details={},
+            agent_id=agent.id, action_type="rest",
+            outcome="rested", details={},
         ),
         agent,
     )
@@ -228,26 +284,52 @@ def resolve_actions(ctx: TurnContext) -> TurnContext:
     """
     Resolve every living agent's action for this turn.
 
-    heal_agent side-effect: the target agent is marked not-sick after
-    all resolutions are collected, so order of healing doesn't matter.
+    Multi-agent side effects applied after all primary resolutions:
+      heal_agent  → target marked not-sick
+      trade_food  → buyer gains food, loses coin
+      steal_food  → victim loses food; creates resentment (handled by
+                    update_relationships in the Phase 3 pipeline)
     """
     resolved: list[ResolvedAction] = []
     agent_map: dict[int, AgentState] = {a.id: a for a in ctx.world_state.agents}
 
     for agent in ctx.world_state.living_agents:
-        opp = _select_action(agent, ctx.opportunities)
+        pressure = ctx.pressures.get(agent.id)
+        opp = _select_action(agent, ctx.opportunities, pressure)
         action_record, updated_agent = _resolve(opp, agent)
         resolved.append(action_record)
         agent_map[agent.id] = updated_agent
 
-    # Apply heal_agent side-effects
+    # --- Side effects ---
+
     for action in resolved:
+        # heal_agent: mark target not-sick
         if action.action_type == "heal_agent" and action.succeeded:
             target_id = action.details.get("healed_agent_id")
             if target_id and target_id in agent_map:
                 agent_map[target_id] = agent_map[target_id].model_copy(
                     update={"is_sick": False}
                 )
+
+        # trade_food: buyer receives food, pays coin
+        elif action.action_type == "trade_food" and action.succeeded:
+            buyer_id = action.details.get("buyer_id")
+            food = action.details.get("food_sold", 0.0)
+            price = action.details.get("coin_received", 0.0)
+            if buyer_id and buyer_id in agent_map:
+                buyer = agent_map[buyer_id]
+                new_inv = buyer.inventory.adjust(ResourceType.food, food)
+                new_inv = new_inv.adjust(ResourceType.coin, -price)
+                agent_map[buyer_id] = buyer.model_copy(update={"inventory": new_inv})
+
+        # steal_food: victim loses food
+        elif action.action_type == "steal_food" and action.succeeded:
+            victim_id = action.details.get("victim_id")
+            stolen = action.details.get("food_stolen", 0.0)
+            if victim_id and victim_id in agent_map:
+                victim = agent_map[victim_id]
+                new_inv = victim.inventory.adjust(ResourceType.food, -stolen)
+                agent_map[victim_id] = victim.model_copy(update={"inventory": new_inv})
 
     updated_agents = [agent_map[a.id] for a in ctx.world_state.agents]
     updated_world = ctx.world_state.model_copy(update={"agents": updated_agents})
