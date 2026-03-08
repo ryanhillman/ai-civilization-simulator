@@ -23,43 +23,10 @@ class Base(DeclarativeBase):
 
 
 # ---------------------------------------------------------------------------
-# Enums
+# Enums (shared domain vocabulary — canonical definitions in app.enums)
 # ---------------------------------------------------------------------------
 
-
-class Season(str, enum.Enum):
-    spring = "spring"
-    summer = "summer"
-    autumn = "autumn"
-    winter = "winter"
-
-
-class Profession(str, enum.Enum):
-    farmer = "farmer"
-    blacksmith = "blacksmith"
-    merchant = "merchant"
-    healer = "healer"
-    priest = "priest"
-    soldier = "soldier"
-
-
-class ResourceType(str, enum.Enum):
-    food = "food"
-    coin = "coin"
-    wood = "wood"
-    medicine = "medicine"
-
-
-class EventType(str, enum.Enum):
-    trade = "trade"
-    gossip = "gossip"
-    conflict = "conflict"
-    festival = "festival"
-    sickness = "sickness"
-    weather = "weather"
-    harvest = "harvest"
-    rest = "rest"
-    theft = "theft"
+from app.enums import EventType, Profession, ResourceType, Season  # noqa: E402
 
 
 class Visibility(str, enum.Enum):
