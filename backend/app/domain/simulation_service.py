@@ -316,7 +316,71 @@ class SimulationService:
         """Load world, run one turn, persist, return TurnResult."""
         world = await _load_world(world_id, session)
         world_state = _world_to_state(world)
-        result = self._runner.run_turn(world_state)
+
+        from app.core.config import settings
+        if settings.ai_enabled:
+            result = await self._advance_turn_with_ai(world, world_state, session)
+        else:
+            result = self._runner.run_turn(world_state)
+            await _persist_turn_results(world, [result], session)
+        return result
+
+    async def _advance_turn_with_ai(
+        self,
+        world,
+        world_state,
+        session: AsyncSession,
+    ) -> TurnResult:
+        """
+        Run one turn with optional AI decision support.
+
+        Splits the pipeline at economy_opportunities:
+          1. Run stages up to economy_opportunities → generates scored candidates.
+          2. Ask AI for decision hints on ambiguous agents (bounded by config).
+          3. Inject validated hints into pre_selected_actions.
+          4. Continue from resolve_actions onwards.
+
+        Falls back transparently if AI fails — the deterministic pipeline still runs.
+        """
+        from app.ai.service import ai_service
+        from app.simulation.types import TurnContext
+        from app.simulation.runner import build_turn_summary
+
+        pipeline = self._runner.pipeline
+
+        # Bump turn counter (mirrors what TurnRunner does internally)
+        bumped = world_state.model_copy(
+            update={"current_turn": world_state.current_turn + 1}
+        )
+        ctx = TurnContext(world_state=bumped)
+
+        # Phase 1: run deterministic stages up through opportunity generation
+        ctx = pipeline.run_up_to("economy_opportunities", ctx)
+
+        # Phase 2: optional AI decision hints (non-blocking failure)
+        name_map: dict[int, str] = {a.id: a.name for a in world.agents}
+        try:
+            hints = await ai_service.advise_decisions(ctx, name_map)
+            if hints:
+                ctx = ctx.model_copy(update={"pre_selected_actions": hints})
+        except Exception:
+            pass  # decision support failure is fully transparent
+
+        # Phase 3: continue deterministic pipeline from resolve_actions
+        ctx = pipeline.run_from("resolve_actions", ctx)
+
+        summary = build_turn_summary(ctx.events)
+        result = TurnResult(
+            world_id=world_state.id,
+            turn_number=bumped.current_turn,
+            world_state=ctx.world_state,
+            resolved_actions=ctx.resolved_actions,
+            events=ctx.events,
+            memories=ctx.memories,
+            pressures=ctx.pressures,
+            world_events=ctx.world_events,
+            summary=summary,
+        )
         await _persist_turn_results(world, [result], session)
         return result
 

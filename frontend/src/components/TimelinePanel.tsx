@@ -86,8 +86,8 @@ export default function TimelinePanel({ worldId, lastResult, onSelectAgent }: Pr
       <div className="panel-header">
         Timeline
         {lastResult && (
-          <span className="ml-2 text-amber-400 font-mono normal-case text-xs">
-            Turn {lastResult.turn_number}
+          <span className="ml-2 text-amber-400 normal-case text-xs font-normal">
+            {lastResult.calendar_date}
           </span>
         )}
       </div>
@@ -95,6 +95,21 @@ export default function TimelinePanel({ worldId, lastResult, onSelectAgent }: Pr
       <div className="overflow-y-auto flex-1">
         {showLive ? (
           <>
+            {/* AI narrative summary (multi-turn runs only) */}
+            {lastResult.ai_summary && (
+              <div className="mx-3 my-2 px-3 py-2.5 rounded border border-amber-800/60 bg-amber-950/30">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">
+                    Chronicle
+                  </span>
+                  <span className="text-xs text-stone-600">(AI narrative)</span>
+                </div>
+                <p className="text-xs text-amber-200/80 leading-relaxed italic">
+                  {lastResult.ai_summary}
+                </p>
+              </div>
+            )}
+
             {/* World events for this turn */}
             {lastResult.world_events.map((we, i) => (
               <WorldEventBanner key={i} we={we} />

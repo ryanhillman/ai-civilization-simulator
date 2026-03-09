@@ -17,7 +17,13 @@ here with a placeholder; the LLM enricher runs as a separate async pass
 after the synchronous pipeline completes.
 """
 from app.enums import EventType
-from app.simulation.types import ResolvedAction, TurnContext, TurnEventRecord
+from app.simulation.types import ResolvedAction, TurnContext, TurnEventRecord, WorldState
+
+
+def _agent_name(world: WorldState, agent_id: int) -> str:
+    """Resolve agent_id to display name; falls back to 'a villager' if not found."""
+    agent = world.agent_by_id(agent_id)
+    return agent.name if agent else "a villager"
 
 _ACTION_TO_EVENT_TYPE: dict[str, EventType] = {
     "harvest_food":  EventType.harvest,
@@ -40,6 +46,7 @@ def _action_to_event(
     action: ResolvedAction,
     world_id: int,
     turn: int,
+    world: WorldState,
 ) -> TurnEventRecord | None:
     if action.action_type in _SILENT_ACTIONS:
         return None
@@ -61,7 +68,7 @@ def _action_to_event(
         world_id=world_id,
         turn_number=turn,
         event_type=event_type,
-        description=f"Agent {action.agent_id} {action.outcome}.",
+        description=f"{_agent_name(world, action.agent_id)} {action.outcome}.",
         agent_ids=agent_ids,
         details=action.details,
     )
@@ -75,7 +82,7 @@ def create_turn_events(ctx: TurnContext) -> TurnContext:
     events: list[TurnEventRecord] = list(ctx.events)
     ws = ctx.world_state
     for action in ctx.resolved_actions:
-        event = _action_to_event(action, ws.id, ws.current_turn)
+        event = _action_to_event(action, ws.id, ws.current_turn, ws)
         if event:
             events.append(event)
     return ctx.model_copy(update={"events": events})

@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
 from app.enums import EventType, Profession, ResourceType, Season
 
@@ -31,6 +31,12 @@ class WorldResponse(BaseModel):
     weather: str
     created_at: datetime
     updated_at: datetime
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def calendar_date(self) -> str:
+        from app.simulation.calendar import turn_to_calendar_date
+        return turn_to_calendar_date(self.current_turn).long
 
 
 class CreateWorldRequest(BaseModel):
@@ -157,6 +163,7 @@ class AgentTurnSummary(BaseModel):
 class TurnResultResponse(BaseModel):
     world_id: int
     turn_number: int
+    calendar_date: str          # e.g. "March 15, Year 1 — Spring"
     current_day: int
     current_season: Season
     weather: str
@@ -166,6 +173,9 @@ class TurnResultResponse(BaseModel):
     world_events: list[WorldEventResponse]
     pressures: list[AgentPressureResponse]
     summary: str
+    # Phase 5: optional AI-generated narrative for multi-turn runs.
+    # None when AI is disabled, single-turn runs, or generation failed.
+    ai_summary: Optional[str] = None
 
 
 class RunRequest(BaseModel):
@@ -174,6 +184,24 @@ class RunRequest(BaseModel):
 
 class AutoplayRequest(BaseModel):
     max_turns: int = Field(ge=1, default=10)
+
+
+# ---------------------------------------------------------------------------
+# AI — ask-agent (public API DTOs)
+# ---------------------------------------------------------------------------
+
+
+class AskAgentRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=300)
+
+
+class AskAgentResponse(BaseModel):
+    agent_id: int
+    agent_name: str
+    answer: str
+    ai_enabled: bool
+    fallback: bool          # True when AI was unavailable and a canned response was used
+    agent_deceased: bool = False  # True when the agent is dead; answer is a memorial record
 
 
 # ---------------------------------------------------------------------------
@@ -215,6 +243,7 @@ def build_inventory_response(items: list) -> InventoryResponse:
 
 def build_turn_result_response(result) -> TurnResultResponse:  # type: ignore[type-arg]
     """Convert a TurnResult domain object to TurnResultResponse."""
+    from app.simulation.calendar import turn_to_calendar_date
     from app.simulation.types import TurnResult  # local import avoids circular
 
     ws = result.world_state
@@ -252,6 +281,7 @@ def build_turn_result_response(result) -> TurnResultResponse:  # type: ignore[ty
     return TurnResultResponse(
         world_id=result.world_id,
         turn_number=result.turn_number,
+        calendar_date=turn_to_calendar_date(result.turn_number).long,
         current_day=ws.current_day,
         current_season=ws.current_season,
         weather=ws.weather,

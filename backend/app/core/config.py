@@ -18,6 +18,15 @@ class Settings(BaseSettings):
     # Anthropic
     anthropic_api_key: str = ""
 
+    # AI feature flags
+    # Set ai_enabled=true in .env to activate LLM features.
+    # All AI features degrade gracefully when disabled.
+    ai_enabled: bool = False
+    ai_model: str = "claude-haiku-4-5-20251001"
+    ai_max_calls_per_run: int = 3       # cap on decision-support calls per turn
+    ai_summary_enabled: bool = True     # narrative summaries for multi-turn runs
+    ai_ask_agent_enabled: bool = True   # in-character agent answers
+
     # App
     app_env: str = "development"
     log_level: str = "INFO"

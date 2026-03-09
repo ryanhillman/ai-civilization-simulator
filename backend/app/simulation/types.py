@@ -320,3 +320,8 @@ class TurnContext(BaseModel):
     pressures: dict[int, AgentPressure] = Field(default_factory=dict)
     # Phase 3: world-level events fired this turn (festival, storm, outbreak…)
     world_events: list[WorldEventRecord] = Field(default_factory=list)
+    # Phase 5: AI decision support hints — agent_id → action_type.
+    # Populated by SimulationService before the resolve_actions stage when AI
+    # is enabled and meaningful ambiguity is detected. resolve_actions validates
+    # the hint against the actual opportunity list before using it.
+    pre_selected_actions: dict[int, str] = Field(default_factory=dict)

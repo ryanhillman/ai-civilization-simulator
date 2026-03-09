@@ -50,7 +50,7 @@ function WorldSelector({ onSelect }: { onSelect: (w: World) => void }) {
               >
                 <div className="text-sm text-stone-200">{w.name}</div>
                 <div className="text-xs text-stone-500">
-                  Turn {w.current_turn} · {w.current_season}
+                  {w.calendar_date}
                 </div>
               </button>
             ))}
@@ -103,7 +103,7 @@ function Dashboard({ world, onBack }: { world: World; onBack: () => void }) {
           {liveWorld?.name ?? world.name}
         </h1>
         <span className="text-xs text-stone-600">
-          Turn {liveWorld?.current_turn ?? world.current_turn}
+          {liveWorld?.calendar_date ?? world.calendar_date}
         </span>
       </header>
 

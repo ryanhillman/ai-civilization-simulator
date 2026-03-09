@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
-import { agentApi } from "@/api/client";
-import type { AgentPressure, AgentTurnSummary, TurnResult } from "@/types";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { agentApi, aiApi } from "@/api/client";
+import type { AgentPressure, AgentTurnSummary, AskAgentResponse, TurnResult } from "@/types";
+import { useState } from "react";
 
 interface Props {
   worldId: number;
@@ -53,6 +54,125 @@ function PressureSection({ pressure }: { pressure: AgentPressure }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Ask-Agent section
+// ---------------------------------------------------------------------------
+
+function AskAgentSection({
+  worldId,
+  agentId,
+  isAlive,
+}: {
+  worldId: number;
+  agentId: number;
+  isAlive: boolean;
+}) {
+  const [question, setQuestion] = useState("");
+  const [lastAnswer, setLastAnswer] = useState<AskAgentResponse | null>(null);
+
+  const ask = useMutation({
+    mutationFn: () => aiApi.askAgent(worldId, agentId, question.trim()),
+    onMutate: () => {
+      setLastAnswer(null);   // clear stale answer the moment submit fires
+    },
+    onSuccess: (data) => {
+      setLastAnswer(data);
+      setQuestion("");
+    },
+  });
+
+  const canSubmit = question.trim().length > 0 && !ask.isPending;
+
+  if (!isAlive) {
+    return (
+      <div className="px-4 py-3 border-t border-stone-800">
+        <p className="text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">
+          Chronicle
+        </p>
+        <p className="text-xs text-stone-600 italic mb-3">
+          This villager has passed away. Their story is recorded in the chronicle.
+        </p>
+        {lastAnswer?.agent_deceased && (
+          <div className="mb-3 rounded bg-stone-900 border border-stone-700 px-3 py-2">
+            <p className="text-xs text-stone-400 leading-relaxed">
+              {lastAnswer.answer}
+            </p>
+            <p className="text-xs text-stone-700 mt-1">Historical record</p>
+          </div>
+        )}
+        <div className="flex gap-2">
+          <input
+            className="flex-1 text-xs bg-stone-900 border border-stone-800 rounded px-2 py-1.5
+                       text-stone-500 placeholder-stone-700 focus:outline-none focus:border-stone-700"
+            placeholder="Ask about this villager..."
+            value={question}
+            maxLength={300}
+            onChange={(e) => setQuestion(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && canSubmit) ask.mutate();
+            }}
+          />
+          <button
+            className="btn-secondary text-xs shrink-0 opacity-60"
+            onClick={() => ask.mutate()}
+            disabled={!canSubmit}
+          >
+            {ask.isPending ? "..." : "Recall"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-4 py-3 border-t border-stone-800">
+      <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-2">
+        Ask this villager
+      </p>
+
+      {lastAnswer && !lastAnswer.agent_deceased && (
+        <div className="mb-3 rounded bg-stone-800/60 border border-stone-700 px-3 py-2">
+          <p className="text-xs text-amber-200 leading-relaxed italic">
+            &ldquo;{lastAnswer.answer}&rdquo;
+          </p>
+          {lastAnswer.fallback && (
+            <p className="text-xs text-stone-600 mt-1">
+              (AI unavailable — fallback response)
+            </p>
+          )}
+        </div>
+      )}
+
+      {ask.isError && (
+        <p className="text-xs text-red-400 mb-2">
+          Could not reach the villager. Try again.
+        </p>
+      )}
+
+      <div className="flex gap-2">
+        <input
+          className="flex-1 text-xs bg-stone-800 border border-stone-700 rounded px-2 py-1.5
+                     text-stone-200 placeholder-stone-600 focus:outline-none focus:border-stone-500"
+          placeholder="Ask a question..."
+          value={question}
+          maxLength={300}
+          onChange={(e) => setQuestion(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && canSubmit) ask.mutate();
+          }}
+        />
+        <button
+          className="btn-secondary text-xs shrink-0"
+          onClick={() => ask.mutate()}
+          disabled={!canSubmit}
+        >
+          {ask.isPending ? "..." : "Ask"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -209,7 +329,7 @@ export default function AgentPanel({ worldId, agentId, lastResult }: Props) {
 
           {/* Recent memories */}
           {agentDetail.recent_memories.length > 0 && (
-            <div className="px-4 py-3">
+            <div className="px-4 py-3 border-b border-stone-800">
               <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-2">
                 Recent Memories
               </p>
@@ -236,6 +356,9 @@ export default function AgentPanel({ worldId, agentId, lastResult }: Props) {
               </div>
             </div>
           )}
+
+          {/* Ask this agent — AI interpretation */}
+          <AskAgentSection worldId={worldId} agentId={agentDetail.id} isAlive={agentDetail.is_alive} />
         </div>
       ) : null}
     </div>

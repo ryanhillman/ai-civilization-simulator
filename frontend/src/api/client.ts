@@ -2,6 +2,7 @@ import axios from "axios";
 import type {
   AgentDetail,
   AgentSummary,
+  AskAgentResponse,
   Memory,
   Relationship,
   TurnEvent,
@@ -81,6 +82,19 @@ export const timelineApi = {
   ) =>
     http
       .get<TurnEvent[]>(`/worlds/${worldId}/timeline`, { params })
+      .then((r) => r.data),
+};
+
+// ---------------------------------------------------------------------------
+// AI
+// ---------------------------------------------------------------------------
+
+export const aiApi = {
+  askAgent: (worldId: number, agentId: number, question: string) =>
+    http
+      .post<AskAgentResponse>(`/worlds/${worldId}/agents/${agentId}/ask`, {
+        question,
+      })
       .then((r) => r.data),
 };
 

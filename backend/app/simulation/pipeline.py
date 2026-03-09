@@ -86,6 +86,24 @@ class TurnPipeline:
             ctx = stage(ctx)
         return ctx
 
+    def run_up_to(self, stage_name: str, ctx: TurnContext) -> TurnContext:
+        """Run all stages up to and including the named stage, then stop."""
+        for name, stage in self._stages:
+            ctx = stage(ctx)
+            if name == stage_name:
+                break
+        return ctx
+
+    def run_from(self, stage_name: str, ctx: TurnContext) -> TurnContext:
+        """Run all stages starting from (and including) the named stage."""
+        active = False
+        for name, stage in self._stages:
+            if name == stage_name:
+                active = True
+            if active:
+                ctx = stage(ctx)
+        return ctx
+
 
 # ---------------------------------------------------------------------------
 # Phase 2 default pipeline (preserved — 6 stages, exact names)

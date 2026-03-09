@@ -32,6 +32,7 @@ export interface World {
   current_turn: number;
   current_day: number;
   current_season: Season;
+  calendar_date: string;   // e.g. "March 1, Year 1 — Spring"
   weather: string;
   created_at: string;
   updated_at: string;
@@ -155,6 +156,7 @@ export interface AgentTurnSummary extends AgentSummary {
 export interface TurnResult {
   world_id: number;
   turn_number: number;
+  calendar_date: string;   // e.g. "March 1, Year 1 — Spring"
   current_day: number;
   current_season: Season;
   weather: string;
@@ -164,6 +166,25 @@ export interface TurnResult {
   world_events: WorldEvent[];
   pressures: AgentPressure[];
   summary: string;
+  // Phase 5: optional AI narrative summary (multi-turn runs only)
+  ai_summary?: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// AI — ask-agent
+// ---------------------------------------------------------------------------
+
+export interface AskAgentRequest {
+  question: string;
+}
+
+export interface AskAgentResponse {
+  agent_id: number;
+  agent_name: string;
+  answer: string;
+  ai_enabled: boolean;
+  fallback: boolean;
+  agent_deceased?: boolean;
 }
 
 // ---------------------------------------------------------------------------

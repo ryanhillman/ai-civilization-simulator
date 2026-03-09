@@ -1,0 +1,13 @@
+Write a 2-3 sentence narrative summary of what happened in {world_name} from turn {turn_start} to turn {turn_end}.
+
+Events during this period:
+{events_text}
+
+Rules:
+- Write in third person, past tense
+- Focus on the most dramatic tensions, changes, and outcomes
+- Reference specific villagers by name when possible
+- Do not invent events not listed above
+- Keep it under 60 words
+
+Summary:

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { agentApi, simApi, worldApi } from "@/api/client";
-import type { AgentTurnSummary, TurnResult, World } from "@/types";
+import type { TurnResult, World } from "@/types";
 
 interface Props {
   worldId: number;
@@ -10,13 +10,6 @@ interface Props {
   selectedAgentId: number | null;
   onResetWorld: () => void;
 }
-
-const SEASON_ICON: Record<string, string> = {
-  spring: "Spr",
-  summer: "Sum",
-  autumn: "Aut",
-  winter: "Win",
-};
 
 function HungerBar({ value }: { value: number }) {
   const pct = Math.round(value * 100);
@@ -109,6 +102,7 @@ export default function WorldPanel({
   const displayWorld = lastResult
     ? {
         current_turn: lastResult.turn_number,
+        calendar_date: lastResult.calendar_date,
         current_day: lastResult.current_day,
         current_season: lastResult.current_season,
         weather: lastResult.weather,
@@ -120,15 +114,12 @@ export default function WorldPanel({
       <div className="panel-header">{world.name}</div>
 
       {/* World stats */}
-      <div className="px-4 py-3 border-b border-stone-800 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-        <div className="text-stone-500">Turn</div>
-        <div className="text-stone-200 font-mono">{displayWorld.current_turn}</div>
-        <div className="text-stone-500">Day</div>
-        <div className="text-stone-200 font-mono">{displayWorld.current_day}</div>
-        <div className="text-stone-500">Season</div>
-        <div className="text-stone-200">{displayWorld.current_season}</div>
-        <div className="text-stone-500">Weather</div>
-        <div className="text-stone-200 capitalize">{displayWorld.weather}</div>
+      <div className="px-4 py-3 border-b border-stone-800 text-xs space-y-1.5">
+        <div className="text-stone-200 font-medium">{displayWorld.calendar_date}</div>
+        <div className="flex items-center justify-between">
+          <span className="text-stone-500 capitalize">{displayWorld.weather}</span>
+          <span className="text-stone-600 font-mono text-xs">turn {displayWorld.current_turn}</span>
+        </div>
       </div>
 
       {/* Controls */}

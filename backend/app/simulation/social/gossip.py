@@ -42,6 +42,12 @@ GOSSIP_TRUST_THRESHOLD = 0.4
 RUMOR_TTL_TURNS = 10          # rumor expires after this many turns
 
 
+def _agent_name(world: WorldState, agent_id: int) -> str:
+    """Resolve agent_id to display name; falls back to 'a villager' if not found."""
+    agent = world.agent_by_id(agent_id)
+    return agent.name if agent else "a villager"
+
+
 # ---------------------------------------------------------------------------
 # Rumor creation
 # ---------------------------------------------------------------------------
@@ -69,8 +75,8 @@ def _rumors_from_actions(
                 turn_expires=turn + RUMOR_TTL_TURNS,
                 rumor_type="theft",
                 content=(
-                    f"Agent {action.agent_id} was seen stealing "
-                    f"food from agent {victim_id}."
+                    f"{_agent_name(world, action.agent_id)} was seen stealing "
+                    f"food from {_agent_name(world, victim_id)}."
                 ),
                 credibility=0.8,
                 known_by=[action.agent_id],
@@ -90,7 +96,7 @@ def _rumors_from_actions(
                     turn_created=turn,
                     turn_expires=turn + RUMOR_TTL_TURNS,
                     rumor_type="sickness",
-                    content=f"{agent.name} (agent {patient_id}) has been seen ill.",
+                    content=f"{agent.name} has been seen ill.",
                     credibility=0.6,
                     known_by=[action.agent_id],
                 ))
@@ -133,7 +139,7 @@ def _hoarding_rumors(world: WorldState) -> list[RumorRecord]:
                     turn_expires=turn + RUMOR_TTL_TURNS,
                     rumor_type="hoarding",
                     content=(
-                        f"Agent {agent.id} ({agent.name}) is hoarding "
+                        f"{agent.name} is hoarding "
                         f"{agent.inventory.food:.0f} food while others starve."
                     ),
                     credibility=0.5,
@@ -183,7 +189,7 @@ def _spread_rumors(
                     turn_number=turn,
                     event_type=EventType.gossip,
                     description=(
-                        f"Agent {listener_id} hears: \"{rumor.content}\""
+                        f"{_agent_name(world, listener_id)} hears: \"{rumor.content}\""
                     ),
                     agent_ids=[listener_id, rumor.source_agent_id],
                     details={

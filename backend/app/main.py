@@ -28,12 +28,13 @@ app.add_middleware(
 # Routes
 # ---------------------------------------------------------------------------
 
-from app.api.routes import agents, simulation, timeline, worlds  # noqa: E402
+from app.api.routes import agents, ai as ai_routes, simulation, timeline, worlds  # noqa: E402
 
 app.include_router(worlds.router, prefix="/api/worlds", tags=["worlds"])
 app.include_router(simulation.router, prefix="/api/worlds", tags=["simulation"])
 app.include_router(agents.router, prefix="/api/worlds", tags=["agents"])
 app.include_router(timeline.router, prefix="/api/worlds", tags=["timeline"])
+app.include_router(ai_routes.router, prefix="/api/worlds", tags=["ai"])
 
 
 # ---------------------------------------------------------------------------

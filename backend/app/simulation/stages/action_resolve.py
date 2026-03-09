@@ -42,6 +42,14 @@ from app.simulation.types import (
     WorldState,
 )
 
+
+def _agent_name(world: WorldState | None, agent_id: int) -> str:
+    """Resolve agent_id to display name; falls back to 'a villager' if not found."""
+    if world is None:
+        return f"agent {agent_id}"
+    agent = world.agent_by_id(agent_id)
+    return agent.name if agent else "a villager"
+
 # Map goal.type → preferred action_types in priority order
 _GOAL_ACTION_MAP: dict[str, list[str]] = {
     "produce":    ["harvest_food", "craft_tools"],
@@ -120,6 +128,7 @@ def _select_action(
 def _resolve(
     opp: Opportunity,
     agent: AgentState,
+    world: WorldState | None = None,
 ) -> tuple[ResolvedAction, AgentState]:
     """Apply action effects; return (action_record, updated_agent)."""
     inv = agent.inventory
@@ -184,7 +193,7 @@ def _resolve(
             ResolvedAction(
                 agent_id=agent.id,
                 action_type=action,
-                outcome=f"sold {food_amount} food to agent {buyer_id} for {price} coin",
+                outcome=f"sold {food_amount} food to {_agent_name(world, buyer_id)} for {price} coin",
                 details={
                     "food_sold": food_amount,
                     "coin_received": price,
@@ -202,7 +211,7 @@ def _resolve(
             ResolvedAction(
                 agent_id=agent.id,
                 action_type=action,
-                outcome=f"stole {steal_amount} food from agent {target_id}",
+                outcome=f"stole {steal_amount} food from {_agent_name(world, target_id)}",
                 details={
                     "food_stolen": steal_amount,
                     "victim_id": target_id,
@@ -232,7 +241,7 @@ def _resolve(
             ResolvedAction(
                 agent_id=agent.id,
                 action_type=action,
-                outcome=f"healed agent {target_id}",
+                outcome=f"healed {_agent_name(world, target_id)}",
                 details={"medicine_spent": medicine_cost, "healed_agent_id": target_id},
             ),
             agent.model_copy(update={"inventory": inv}),
@@ -295,8 +304,19 @@ def resolve_actions(ctx: TurnContext) -> TurnContext:
 
     for agent in ctx.world_state.living_agents:
         pressure = ctx.pressures.get(agent.id)
-        opp = _select_action(agent, ctx.opportunities, pressure)
-        action_record, updated_agent = _resolve(opp, agent)
+
+        # Phase 5: AI decision support hint — use pre-selected action only
+        # if it matches an actual opportunity in the candidate list (validation).
+        # Falls back to deterministic selection if hint is absent or invalid.
+        pre_type = ctx.pre_selected_actions.get(agent.id)
+        if pre_type:
+            agent_opps = [o for o in ctx.opportunities if o.agent_id == agent.id]
+            hint_opp = next((o for o in agent_opps if o.action_type == pre_type), None)
+            opp = hint_opp if hint_opp is not None else _select_action(agent, ctx.opportunities, pressure)
+        else:
+            opp = _select_action(agent, ctx.opportunities, pressure)
+
+        action_record, updated_agent = _resolve(opp, agent, ctx.world_state)
         resolved.append(action_record)
         agent_map[agent.id] = updated_agent
 
