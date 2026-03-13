@@ -20,7 +20,7 @@ MEMORY_THRESHOLD = 0.15
 
 _EVENT_EMOTIONAL_WEIGHT: dict[EventType, float] = {
     EventType.harvest:  0.2,
-    EventType.trade:    0.1,
+    EventType.trade:    0.15,  # raised from 0.1 so trade/craft events are stored for repetition tracking
     EventType.sickness: -0.4,
     EventType.festival: 0.5,
     EventType.conflict: -0.6,

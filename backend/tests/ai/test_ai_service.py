@@ -1,7 +1,7 @@
 """
 Tests for AIService logic and fallback behavior.
 
-All tests use a mock Anthropic client — no live API calls.
+All tests use a mock Azure OpenAI client — no live API calls.
 
 Covers:
   - ask_agent: returns answer when AI responds correctly
@@ -33,20 +33,23 @@ from app.ai.service import AIService, _find_ambiguous_agents
 
 
 def _make_mock_client(text: str) -> MagicMock:
-    """Return a mock Anthropic client that always returns the given text."""
-    mock_content = SimpleNamespace(text=text)
-    mock_response = SimpleNamespace(content=[mock_content])
+    """Return a mock Azure OpenAI client that always returns the given text."""
+    mock_message = SimpleNamespace(content=text)
+    mock_choice = SimpleNamespace(message=mock_message)
+    mock_response = SimpleNamespace(choices=[mock_choice])
     client = MagicMock()
-    client.messages = MagicMock()
-    client.messages.create = AsyncMock(return_value=mock_response)
+    client.chat = MagicMock()
+    client.chat.completions = MagicMock()
+    client.chat.completions.create = AsyncMock(return_value=mock_response)
     return client
 
 
 def _make_error_client() -> MagicMock:
     """Return a mock client whose create() always raises."""
     client = MagicMock()
-    client.messages = MagicMock()
-    client.messages.create = AsyncMock(side_effect=RuntimeError("API error"))
+    client.chat = MagicMock()
+    client.chat.completions = MagicMock()
+    client.chat.completions.create = AsyncMock(side_effect=RuntimeError("API error"))
     return client
 
 
@@ -82,7 +85,7 @@ class TestAskAgent:
         with patch("app.core.config.settings") as mock_settings:
             mock_settings.ai_enabled = True
             mock_settings.ai_ask_agent_enabled = True
-            mock_settings.ai_model = "test-model"
+            mock_settings.azure_openai_deployment_name = "test-deployment"
             ctx = _minimal_context()
             result = await svc.ask_agent(ctx, "What do you do each morning?")
 
@@ -115,7 +118,7 @@ class TestAskAgent:
         with patch("app.core.config.settings") as mock_settings:
             mock_settings.ai_enabled = True
             mock_settings.ai_ask_agent_enabled = True
-            mock_settings.ai_model = "test-model"
+            mock_settings.azure_openai_deployment_name = "test-deployment"
             result = await svc.ask_agent(_minimal_context(), "Hello?")
 
         assert result is None
@@ -126,7 +129,7 @@ class TestAskAgent:
         with patch("app.core.config.settings") as mock_settings:
             mock_settings.ai_enabled = True
             mock_settings.ai_ask_agent_enabled = True
-            mock_settings.ai_model = "test-model"
+            mock_settings.azure_openai_deployment_name = "test-deployment"
             result = await svc.ask_agent(_minimal_context(), "Hello?")
 
         # Blank text → AskAgentAIResponse validation fails → None
@@ -138,7 +141,7 @@ class TestAskAgent:
         with patch("app.core.config.settings") as mock_settings:
             mock_settings.ai_enabled = True
             mock_settings.ai_ask_agent_enabled = True
-            mock_settings.ai_model = "test-model"
+            mock_settings.azure_openai_deployment_name = "test-deployment"
             result = await svc.ask_agent(_minimal_context(), "Morning?")
 
         assert result is not None
@@ -163,7 +166,7 @@ class TestGenerateTurnSummary:
         with patch("app.core.config.settings") as mock_settings:
             mock_settings.ai_enabled = True
             mock_settings.ai_summary_enabled = True
-            mock_settings.ai_model = "test-model"
+            mock_settings.azure_openai_deployment_name = "test-deployment"
             result = await svc.generate_turn_summary(request)
 
         assert result is not None
@@ -198,7 +201,7 @@ class TestGenerateTurnSummary:
         with patch("app.core.config.settings") as mock_settings:
             mock_settings.ai_enabled = True
             mock_settings.ai_summary_enabled = True
-            mock_settings.ai_model = "test-model"
+            mock_settings.azure_openai_deployment_name = "test-deployment"
             result = await svc.generate_turn_summary(request)
 
         assert result is None
@@ -276,7 +279,7 @@ class TestAdviseDecisions:
         with patch("app.core.config.settings") as mock_settings:
             mock_settings.ai_enabled = True
             mock_settings.ai_max_calls_per_run = 3
-            mock_settings.ai_model = "test-model"
+            mock_settings.azure_openai_deployment_name = "test-deployment"
             result = await svc.advise_decisions(ctx, {1: "Agent1"})
 
         # AI returned "harvest_food" which is a valid candidate
@@ -292,7 +295,7 @@ class TestAdviseDecisions:
         with patch("app.core.config.settings") as mock_settings:
             mock_settings.ai_enabled = True
             mock_settings.ai_max_calls_per_run = 3
-            mock_settings.ai_model = "test-model"
+            mock_settings.azure_openai_deployment_name = "test-deployment"
             result = await svc.advise_decisions(ctx, {1: "Agent1"})
 
         # "steal_food" is NOT in the candidate list → not applied
@@ -307,7 +310,7 @@ class TestAdviseDecisions:
         with patch("app.core.config.settings") as mock_settings:
             mock_settings.ai_enabled = True
             mock_settings.ai_max_calls_per_run = 3
-            mock_settings.ai_model = "test-model"
+            mock_settings.azure_openai_deployment_name = "test-deployment"
             result = await svc.advise_decisions(ctx, {1: "Agent1"})
 
         assert result == {}

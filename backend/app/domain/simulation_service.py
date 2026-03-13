@@ -40,6 +40,21 @@ from app.simulation.types import (
 # ---------------------------------------------------------------------------
 
 
+def _compute_constitution(world_id: int, agent_id: int) -> float:
+    """Deterministic metabolic constitution multiplier in [0.85, 1.15].
+
+    Seeded from (world_id, agent_id) via FNV-1a-style 32-bit mixing so each
+    world produces a unique metabolism profile for each agent. This breaks the
+    fixed Roland/Marta mortality order: Roland might have low constitution
+    (eating more) in one world but high constitution (eating less) in another.
+
+    Default agents created without a DB world (tests) get constitution=1.0
+    because AgentState.constitution defaults to 1.0 in types.py.
+    """
+    raw = ((world_id * 2654435761) ^ (agent_id * 40503)) & 0xFFFFFFFF
+    return round(0.85 + (raw % 10000) / 33333.0, 3)
+
+
 def _agent_to_state(agent: Agent) -> AgentState:
     inv = InventorySnapshot()
     for item in agent.inventory:
@@ -67,10 +82,14 @@ def _agent_to_state(agent: Agent) -> AgentState:
         is_alive=agent.is_alive,
         is_sick=agent.is_sick,
         hunger=agent.hunger,
+        constitution=_compute_constitution(agent.world_id, agent.id),
         personality_traits=agent.personality_traits or {},
         goals=agent.goals or [],
         inventory=inv,
         recent_memories=recent_memories,
+        consecutive_work_turns=getattr(agent, "consecutive_work_turns", 0) or 0,
+        days_sick=getattr(agent, "days_sick", 0) or 0,
+        max_health=getattr(agent, "max_health", 1.0) or 1.0,
     )
 
 
@@ -160,6 +179,9 @@ async def _persist_turn_results(
         db_agent.hunger = agent_state.hunger
         db_agent.is_alive = agent_state.is_alive
         db_agent.is_sick = agent_state.is_sick
+        db_agent.consecutive_work_turns = agent_state.consecutive_work_turns
+        db_agent.days_sick = agent_state.days_sick
+        db_agent.max_health = agent_state.max_health
 
         inv_map = {item.resource_type: item for item in db_agent.inventory}
         for resource in ResourceType:

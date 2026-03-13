@@ -7,7 +7,7 @@ An always-live web application that simulates a small AI-driven medieval village
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS + Zustand + TanStack Query
 - **Backend**: Python 3.12 + FastAPI + SQLAlchemy 2 (async) + Alembic
 - **Database**: PostgreSQL 16
-- **AI**: Anthropic Claude (selective, structured output only)
+- **AI**: Azure OpenAI (selective, structured output only)
 
 ## Quick Start
 
@@ -16,6 +16,9 @@ An always-live web application that simulates a small AI-driven medieval village
 - Docker + Docker Compose
 - Python 3.12 + [uv](https://docs.astral.sh/uv/)
 - Node.js 20+ + [pnpm](https://pnpm.io/)
+- An **Azure OpenAI** resource with a deployed model (e.g. `gpt-4o`)
+  - Find your values in the Azure Portal under your OpenAI resource → Keys and Endpoint
+  - The AI layer is **optional** — the simulation runs fully deterministically with `AI_ENABLED=false`
 
 ### 1. Start the database
 
@@ -28,7 +31,8 @@ docker compose up -d
 ```bash
 cd backend
 cp .env.example .env
-# Edit .env and add your ANTHROPIC_API_KEY
+# Edit .env — fill in AZURE_OPENAI_KEY, AZURE_OPENAI_ENDPOINT, and
+# AZURE_OPENAI_DEPLOYMENT_NAME, then set AI_ENABLED=true to activate AI features.
 
 uv sync
 uv run alembic upgrade head

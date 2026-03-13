@@ -114,7 +114,7 @@ class TestPoorHarvestEvent:
 
         harvest_opps = [o for o in ctx.opportunities if o.action_type == "harvest_food"]
         assert len(harvest_opps) == 1
-        # 3.0 * 0.5 = 1.5 yield base
+        # winter base 3.0 * poor_harvest multiplier 0.5 = 1.5
         assert harvest_opps[0].metadata["yield_base"] == pytest.approx(1.5)
 
 
@@ -173,7 +173,9 @@ class TestStormEvent:
 
 class TestSicknessOutbreak:
     def test_outbreak_on_turn_7(self, village):
-        # turn % 13 == 7
+        # turn % 19 == 7 (period raised from 13 → 19)
+        # Location contamination may spread to nearby agents (30% chance each),
+        # so newly_sick >= 1. We verify at least one agent falls ill.
         world = village.model_copy(update={"current_turn": 7})
         ctx = TurnContext(world_state=world)
         ctx_out = apply_world_events(ctx)
@@ -182,7 +184,7 @@ class TestSicknessOutbreak:
             a for a in ctx_out.world_state.living_agents
             if a.is_sick and not village.agent_by_id(a.id).is_sick
         ]
-        assert len(newly_sick) == 1
+        assert len(newly_sick) >= 1
 
     def test_outbreak_emits_sickness_event(self, village):
         world = village.model_copy(update={"current_turn": 7})
@@ -193,7 +195,7 @@ class TestSicknessOutbreak:
         assert len(sick_events) >= 1
 
     def test_no_outbreak_on_regular_turn(self, village):
-        world = village.model_copy(update={"current_turn": 5})  # 5 % 13 != 7
+        world = village.model_copy(update={"current_turn": 5})  # 5 % 19 != 7
         ctx = TurnContext(world_state=world)
         ctx_out = apply_world_events(ctx)
 

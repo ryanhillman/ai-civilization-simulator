@@ -146,8 +146,8 @@ class TestGenerateTradeOpportunities:
         opps = generate_trade_opportunities(
             world.living_agents, pressures, Season.spring
         )
-        # Farmer offers to only one buyer; should be the more desperate one
-        assert len(opps) == 1
+        # Most desperate buyer is always offered food first
+        assert len(opps) >= 1
         assert opps[0].target_agent_id == hungry_1.id
 
 

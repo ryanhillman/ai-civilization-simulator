@@ -82,12 +82,26 @@ class AgentState(BaseModel):
     is_alive: bool = True
     is_sick: bool = False
     hunger: float = 0.0  # 0.0 = full, 1.0 = starving/dead threshold
+    # Metabolic constitution: food consumption multiplier [0.85, 1.15].
+    # Deterministically seeded from (world_id, agent_id) by simulation_service
+    # so different worlds produce different mortality orders. Default 1.0 keeps
+    # the pure engine and all existing tests unchanged.
+    constitution: float = 1.0
     personality_traits: dict[str, float] = Field(default_factory=dict)
     goals: list[dict[str, Any]] = Field(default_factory=list)
     inventory: InventorySnapshot = Field(default_factory=InventorySnapshot)
     # Recent memories passed in by the service layer; used for memory_pressure.
     # Empty by default so the pure engine works without a DB.
     recent_memories: list[MemoryRecord] = Field(default_factory=list)
+    # Consecutive productive-work turns without rest (farmer/blacksmith fatigue).
+    # Updated by resolve_actions; consumed by refresh_agents next turn.
+    consecutive_work_turns: int = 0
+    # Days the agent has been continuously sick (resets on recovery).
+    # Drives sickness lethality scaling — longer illness = higher death risk.
+    days_sick: int = 0
+    # Effective health ceiling (0.3 – 1.0). Death fires when hunger >= max_health.
+    # Decays with occupational fatigue and long-term age; starts at 1.0.
+    max_health: float = 1.0
 
 
 # ---------------------------------------------------------------------------

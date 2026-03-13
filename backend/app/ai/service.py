@@ -140,7 +140,7 @@ class AIService:
     # ------------------------------------------------------------------
 
     def _get_client(self):
-        """Return the Anthropic async client, or None if AI is unavailable."""
+        """Return the Azure OpenAI async client, or None if AI is unavailable."""
         if self._client is not None:
             return self._client
 
@@ -148,15 +148,22 @@ class AIService:
 
         if not settings.ai_enabled:
             return None
-        if not settings.anthropic_api_key:
-            logger.warning("AI enabled but ANTHROPIC_API_KEY is not set")
+        if not settings.azure_openai_key:
+            logger.warning("AI enabled but AZURE_OPENAI_KEY is not set")
+            return None
+        if not settings.azure_openai_endpoint:
+            logger.warning("AI enabled but AZURE_OPENAI_ENDPOINT is not set")
             return None
         try:
-            import anthropic
+            from openai import AsyncAzureOpenAI
 
-            return anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+            return AsyncAzureOpenAI(
+                api_key=settings.azure_openai_key,
+                azure_endpoint=settings.azure_openai_endpoint,
+                api_version=settings.azure_openai_api_version,
+            )
         except Exception as exc:
-            logger.warning("Failed to initialize Anthropic client: %s", exc)
+            logger.warning("Failed to initialize Azure OpenAI client: %s", exc)
             return None
 
     # ------------------------------------------------------------------
@@ -197,12 +204,12 @@ class AIService:
         )
 
         try:
-            resp = await client.messages.create(
-                model=settings.ai_model,
+            resp = await client.chat.completions.create(
+                model=settings.azure_openai_deployment_name,
                 max_tokens=200,
                 messages=[{"role": "user", "content": prompt}],
             )
-            text = resp.content[0].text
+            text = resp.choices[0].message.content
             return AskAgentAIResponse(answer=text)
         except Exception as exc:
             logger.warning("ask_agent AI call failed: %s", exc)
@@ -245,12 +252,12 @@ class AIService:
         )
 
         try:
-            resp = await client.messages.create(
-                model=settings.ai_model,
+            resp = await client.chat.completions.create(
+                model=settings.azure_openai_deployment_name,
                 max_tokens=150,
                 messages=[{"role": "user", "content": prompt}],
             )
-            text = resp.content[0].text
+            text = resp.choices[0].message.content
             return TurnSummaryAIResponse(narrative=text)
         except Exception as exc:
             logger.warning("generate_turn_summary AI call failed: %s", exc)
@@ -296,7 +303,7 @@ class AIService:
             if agent is None:
                 continue
             context = build_agent_context_from_state(agent, ctx.world_state, name_map)
-            chosen = await self._choose_action(client, settings.ai_model, context, candidates)
+            chosen = await self._choose_action(client, settings.azure_openai_deployment_name, context, candidates)
             # Strict validation: chosen must be in the candidate list
             if chosen and chosen in candidates:
                 hints[agent_id] = chosen
@@ -334,13 +341,13 @@ class AIService:
         )
 
         try:
-            resp = await client.messages.create(
+            resp = await client.chat.completions.create(
                 model=model,
                 max_tokens=30,
                 messages=[{"role": "user", "content": prompt}],
             )
             raw = (
-                resp.content[0].text.strip().lower().replace(" ", "_").replace("-", "_")
+                resp.choices[0].message.content.strip().lower().replace(" ", "_").replace("-", "_")
             )
             # Exact match
             if raw in candidates:

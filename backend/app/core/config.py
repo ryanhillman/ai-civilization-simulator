@@ -15,14 +15,16 @@ class Settings(BaseSettings):
     db_password: str = "civ_pass"
     db_name: str = "civ_db"
 
-    # Anthropic
-    anthropic_api_key: str = ""
+    # Azure OpenAI
+    azure_openai_key: str = ""
+    azure_openai_endpoint: str = ""
+    azure_openai_deployment_name: str = "gpt-4o"
+    azure_openai_api_version: str = "2024-02-01"
 
     # AI feature flags
     # Set ai_enabled=true in .env to activate LLM features.
     # All AI features degrade gracefully when disabled.
     ai_enabled: bool = False
-    ai_model: str = "claude-haiku-4-5-20251001"
     ai_max_calls_per_run: int = 3       # cap on decision-support calls per turn
     ai_summary_enabled: bool = True     # narrative summaries for multi-turn runs
     ai_ask_agent_enabled: bool = True   # in-character agent answers

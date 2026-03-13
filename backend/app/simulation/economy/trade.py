@@ -21,14 +21,23 @@ in resolve_actions).
 """
 from __future__ import annotations
 
-from app.enums import Season
+from app.enums import Profession, Season
 from app.simulation.pressure import score_opportunity
 from app.simulation.stages.agent_refresh import FOOD_CONSUMPTION
 from app.simulation.types import AgentPressure, AgentState, Opportunity, WorldState
 
-TRADE_SURPLUS_THRESHOLD_TURNS = 5.0   # seller needs > 5 turns of food stock
-BUYER_PRESSURE_THRESHOLD = 0.5        # buyer resource_pressure to qualify
+TRADE_SURPLUS_THRESHOLD_TURNS = 3.5   # seller needs > 3.5 turns of food stock
+# Merchant survival instinct: merchants refuse to sell food if their own supply
+# is below a 5-turn survival buffer — they prioritise self-preservation.
+MERCHANT_SURVIVAL_THRESHOLD_TURNS = 5.0
+BUYER_PRESSURE_THRESHOLD = 0.35       # lowered from 0.5 — earlier intervention
 FOOD_PER_TRADE = 2.0                  # food units transferred per trade
+MAX_BUYERS_PER_SELLER = 2             # seller feeds up to 2 needy buyers per turn
+
+# Only these professions produce food and may therefore offer it for sale.
+# Non-producers (healer, priest, soldier, blacksmith) have finite starting stocks
+# that must last them — they should never appear as sellers.
+_FOOD_PRODUCING_PROFESSIONS = frozenset({Profession.farmer, Profession.merchant})
 
 _SEASON_PRICE_MODIFIER: dict[str, float] = {
     "winter": 1.4,
@@ -85,17 +94,32 @@ def generate_trade_opportunities(
     if not needy_buyers:
         return opps
 
-    # For each potential seller, offer to the most desperate buyer
+    # For each potential seller, offer to up to MAX_BUYERS_PER_SELLER needy buyers.
+    # Non-food-producers are excluded as sellers: they cannot replenish their stocks
+    # and selling their buffer food would accelerate their own starvation.
     for seller in agents:
+        if seller.profession not in _FOOD_PRODUCING_PROFESSIONS:
+            continue
+
         daily = FOOD_CONSUMPTION.get(seller.profession.value, 1.0)
-        surplus_threshold = daily * TRADE_SURPLUS_THRESHOLD_TURNS
+        # Merchant survival instinct: merchants use a higher survival threshold —
+        # they refuse to trade food away if their personal supply is too low.
+        threshold_turns = (
+            MERCHANT_SURVIVAL_THRESHOLD_TURNS
+            if seller.profession == Profession.merchant
+            else TRADE_SURPLUS_THRESHOLD_TURNS
+        )
+        surplus_threshold = daily * threshold_turns
 
         if seller.inventory.food <= surplus_threshold:
             continue
 
         seller_pressure = pressures.get(seller.id)
+        trades_made = 0
 
         for buyer in needy_buyers:
+            if trades_made >= MAX_BUYERS_PER_SELLER:
+                break
             if buyer.id == seller.id:
                 continue
 
@@ -117,6 +141,6 @@ def generate_trade_opportunities(
                 },
             )
             opps.append(score_opportunity(opp, seller_pressure))
-            break  # one trade offer per seller per turn
+            trades_made += 1
 
     return opps

@@ -78,6 +78,10 @@ class Agent(Base):
     is_sick: Mapped[bool] = mapped_column(Boolean, default=False)
     # 0.0 = full, 1.0 = starving
     hunger: Mapped[float] = mapped_column(Float, default=0.0)
+    # Risk diversification fields (Phase 6)
+    consecutive_work_turns: Mapped[int] = mapped_column(Integer, default=0)
+    days_sick: Mapped[int] = mapped_column(Integer, default=0)
+    max_health: Mapped[float] = mapped_column(Float, default=1.0)
     # { courage, greed, warmth, cunning, piety } — each 0.0..1.0
     personality_traits: Mapped[dict] = mapped_column(JSONB, default=dict)
     # [{ type, target, priority }]

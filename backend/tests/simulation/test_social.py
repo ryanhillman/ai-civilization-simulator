@@ -316,6 +316,23 @@ class TestSpreadGossip:
         assert len(hoarding_rumors) >= 1
         assert hoarding_rumors[0].subject_agent_id == hoarder.id
 
+    def test_hoarding_rumor_uses_descriptive_language_not_raw_numbers(self):
+        """Hoarding rumors should read as village gossip, not an inventory audit."""
+        import re
+        hoarder = make_agent_state(agent_id=1, food=28.0)
+        starving = make_agent_state(agent_id=2, food=0.0)
+        world = make_world_state(agents=[hoarder, starving])
+        ctx = TurnContext(world_state=world)
+        ctx_out = spread_gossip(ctx)
+
+        hoarding = [r for r in ctx_out.world_state.active_rumors if r.rumor_type == "hoarding"]
+        assert hoarding
+        content = hoarding[0].content
+        # No standalone integer quantity like "28" or "28.0" should appear
+        assert not re.search(r"\b\d+\b", content), (
+            f"Raw number found in hoarding rumor: {content!r}"
+        )
+
     def test_spread_count_increments(self, farmer, merchant):
         world = make_world_state(
             agents=[farmer, merchant],

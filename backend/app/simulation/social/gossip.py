@@ -48,6 +48,22 @@ def _agent_name(world: WorldState, agent_id: int) -> str:
     return agent.name if agent else "a villager"
 
 
+def _hoard_description(food: float) -> str:
+    """
+    Narrative food descriptor for hoarding rumors.
+
+    Village gossip uses impressionistic language rather than exact inventory
+    figures — villagers estimate, not audit.
+    """
+    if food >= 50:
+        return "enough food to last the whole winter"
+    if food >= 35:
+        return "a great store of food"
+    if food >= 25:
+        return "plenty of food"
+    return "far more food than they need"
+
+
 # ---------------------------------------------------------------------------
 # Rumor creation
 # ---------------------------------------------------------------------------
@@ -140,7 +156,7 @@ def _hoarding_rumors(world: WorldState) -> list[RumorRecord]:
                     rumor_type="hoarding",
                     content=(
                         f"{agent.name} is hoarding "
-                        f"{agent.inventory.food:.0f} food while others starve."
+                        f"{_hoard_description(agent.inventory.food)} while others starve."
                     ),
                     credibility=0.5,
                     known_by=[pressures_high[0].id],

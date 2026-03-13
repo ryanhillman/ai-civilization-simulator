@@ -26,7 +26,7 @@ async def get_timeline(
     stmt = (
         select(TurnEvent)
         .where(TurnEvent.world_id == world_id)
-        .order_by(TurnEvent.turn_number.desc(), TurnEvent.id.desc())
+        .order_by(TurnEvent.turn_number.desc(), TurnEvent.id.asc())
         .limit(limit)
     )
 

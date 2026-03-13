@@ -36,6 +36,9 @@ _ACTION_TO_EVENT_TYPE: dict[str, EventType] = {
     "pray":          EventType.rest,
     "bless_village": EventType.festival,
     "patrol":        EventType.rest,
+    # Priest quiet activities — visible in timeline for narrative variety
+    "study":         EventType.rest,
+    "tend_garden":   EventType.rest,
 }
 
 # Actions too mundane to surface as timeline events

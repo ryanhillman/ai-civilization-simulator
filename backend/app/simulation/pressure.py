@@ -154,7 +154,7 @@ def compute_agent_pressure(agent: AgentState, world: WorldState) -> AgentPressur
 # Opportunity scoring
 # ---------------------------------------------------------------------------
 
-_FOOD_SEEKING = frozenset({"harvest_food", "buy_food", "trade_food"})
+_FOOD_SEEKING = frozenset({"harvest_food", "buy_food"})
 _HEALING = frozenset({"heal_self", "heal_agent"})
 _PRODUCTION = frozenset({"harvest_food", "craft_tools", "trade_goods", "trade_food"})
 _COOPERATIVE = frozenset({"heal_agent", "bless_village"})
@@ -201,6 +201,16 @@ def score_opportunity(opp: Opportunity, pressure: AgentPressure | None) -> Oppor
     # Low overall pressure: cooperative behaviour is more likely
     if pressure.total < 0.5 and action in _COOPERATIVE:
         base += 0.3
+
+    # Surplus: when food is abundant (low resource pressure) selling is better
+    # than harvesting more into an already-full stockpile.
+    if pressure.resource_pressure < 0.2 and action == "trade_food":
+        base += 0.7
+
+    # Comfortable merchant: trade_goods becomes less urgent when the agent is
+    # well-resourced overall — creates natural rest/variety turns.
+    if pressure.resource_pressure < 0.2 and pressure.total < 0.5 and action == "trade_goods":
+        base -= 0.3
 
     # High overall pressure: survival mode — gossip and patrol increase
     if pressure.total >= 2.5:

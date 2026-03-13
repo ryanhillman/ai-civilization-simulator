@@ -55,3 +55,11 @@ async def health() -> dict:
 @app.on_event("startup")
 async def on_startup() -> None:
     logger.info("AI Civilization Simulator starting up [env=%s]", settings.app_env)
+    # --- DIAGNOSTIC: remove after confirming AI config ---
+    key = settings.azure_openai_key
+    key_preview = key[:5] if key else "(empty)"
+    print(f"[DIAG] ai_enabled={settings.ai_enabled!r}")
+    print(f"[DIAG] azure_openai_key prefix={key_preview!r} (len={len(key)})")
+    print(f"[DIAG] azure_openai_endpoint={settings.azure_openai_endpoint!r}")
+    print(f"[DIAG] azure_openai_deployment_name={settings.azure_openai_deployment_name!r}")
+    # --- END DIAGNOSTIC ---

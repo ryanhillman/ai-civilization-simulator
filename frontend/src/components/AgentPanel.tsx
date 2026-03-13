@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { agentApi, aiApi } from "@/api/client";
 import type { AgentPressure, AgentTurnSummary, AskAgentResponse, TurnResult } from "@/types";
 import { useState } from "react";
+import { AgentAvatar } from "./AgentAvatar";
 
 interface Props {
   worldId: number;
@@ -215,24 +216,37 @@ export default function AgentPanel({ worldId, agentId, lastResult }: Props) {
       ) : agentDetail ? (
         <div className="overflow-y-auto flex-1">
           {/* Header */}
-          <div className="px-4 py-3 border-b border-stone-800">
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-base font-semibold text-stone-100">{agentDetail.name}</h2>
+          <div className={`px-4 py-3 border-b border-stone-800 ${!agentDetail.is_alive ? "opacity-60" : ""}`}>
+            <div className="flex items-center gap-3 mb-2.5">
+              <div style={{ borderRadius: "50%", border: "2px solid rgba(255,255,255,0.1)", lineHeight: 0, flexShrink: 0 }}>
+                <AgentAvatar
+                  id={agentDetail.id}
+                  name={agentDetail.name}
+                  isAlive={agentDetail.is_alive}
+                  isSick={agentDetail.is_sick && agentDetail.is_alive}
+                  size={48}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-1">
+                  <h2 className="text-base font-semibold text-stone-100 truncate">
+                    {agentDetail.name}
+                  </h2>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    {agentDetail.is_sick && (
+                      <span className="badge bg-red-900 text-red-300">sick</span>
+                    )}
+                    {!agentDetail.is_alive && (
+                      <span className="badge bg-stone-800 text-stone-500">deceased</span>
+                    )}
+                  </div>
+                </div>
                 <p className="text-xs text-stone-500 capitalize">
                   {agentDetail.profession} · age {agentDetail.age}
                 </p>
               </div>
-              <div className="flex flex-col items-end gap-1">
-                {agentDetail.is_sick && (
-                  <span className="badge bg-red-900 text-red-300">sick</span>
-                )}
-                {!agentDetail.is_alive && (
-                  <span className="badge bg-stone-800 text-stone-500">deceased</span>
-                )}
-              </div>
             </div>
-            <div className="mt-2 flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <span className="text-xs text-stone-500">Hunger</span>
               <div className="flex-1 h-1.5 bg-stone-700 rounded-full overflow-hidden">
                 <div

@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { worldApi } from "@/api/client";
-import type { TurnResult, World } from "@/types";
+import type { AgentSummary, TurnResult, World } from "@/types";
 import AgentPanel from "@/components/AgentPanel";
 import TimelinePanel from "@/components/TimelinePanel";
+import VillageMap from "@/components/VillageMap";
 import WorldPanel from "@/components/WorldPanel";
 
 // ---------------------------------------------------------------------------
@@ -89,6 +90,10 @@ function Dashboard({ world, onBack }: { world: World; onBack: () => void }) {
   // Last turn result drives timeline and agent summaries
   const lastResult = qc.getQueryData<TurnResult>(["lastResult", world.id]) ?? null;
 
+  // Agents for the village map — prefer live turn data, fall back to DB cache
+  const dbAgents = qc.getQueryData<AgentSummary[]>(["agents", world.id]) ?? [];
+  const mapAgents = lastResult?.agents ?? dbAgents;
+
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Top bar */}
@@ -118,11 +123,24 @@ function Dashboard({ world, onBack }: { world: World; onBack: () => void }) {
           onResetWorld={() => setSelectedAgentId(null)}
         />
 
-        <TimelinePanel
-          worldId={world.id}
-          lastResult={lastResult}
-          onSelectAgent={setSelectedAgentId}
-        />
+        {/* Center column: village map above, chronicle below */}
+        <div className="flex flex-col gap-3 min-h-0 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <VillageMap
+              agents={mapAgents}
+              resolvedActions={lastResult?.resolved_actions ?? null}
+              selectedAgentId={selectedAgentId}
+              onSelectAgent={setSelectedAgentId}
+            />
+          </div>
+          <div className="flex-none overflow-hidden" style={{ height: "300px" }}>
+            <TimelinePanel
+              worldId={world.id}
+              lastResult={lastResult}
+              onSelectAgent={setSelectedAgentId}
+            />
+          </div>
+        </div>
 
         <AgentPanel
           worldId={world.id}
