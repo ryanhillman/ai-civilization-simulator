@@ -16,9 +16,15 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+allowed_origins = [
+    origin.strip()
+    for origin in settings.allowed_origins.split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,7 +50,11 @@ app.include_router(ai_routes.router, prefix="/api/worlds", tags=["ai"])
 
 @app.get("/api/health", tags=["system"])
 async def health() -> dict:
-    return {"status": "ok", "env": settings.app_env}
+    return {
+        "status": "ok",
+        "env": settings.app_env,
+        "ai_enabled": settings.ai_enabled,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -55,6 +65,8 @@ async def health() -> dict:
 @app.on_event("startup")
 async def on_startup() -> None:
     logger.info("AI Civilization Simulator starting up [env=%s]", settings.app_env)
+    logger.info("Allowed CORS origins: %s", allowed_origins)
+
     # --- DIAGNOSTIC: remove after confirming AI config ---
     key = settings.azure_openai_key
     key_preview = key[:5] if key else "(empty)"
