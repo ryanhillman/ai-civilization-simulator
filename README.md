@@ -1,6 +1,8 @@
 # AI Civilization Simulator
 
-> A full-stack AI simulation platform where autonomous agents reason, remember, and shape a living medieval village — turn by turn.
+> AI Civilization Simulator is a production-shaped full-stack platform that explores how deterministic simulation systems can be augmented with selective large-language-model reasoning without sacrificing reproducibility.
+
+The system demonstrates modern cloud deployment patterns, domain-driven backend design, and AI integration as an optional interpretation layer rather than core decision logic.
 
 ---
 
@@ -13,7 +15,7 @@
 
 ---
 
-## Why This Project Exists
+## System Overview
 
 This project explores how **deterministic simulation systems can be augmented with selective large-language-model reasoning** without introducing non-determinism into core game logic.
 
@@ -61,44 +63,50 @@ When high-impact events occur, Azure OpenAI generates narrative responses in the
 
 ## Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                        Client (Browser)                      │
-│              React + Vite + Tailwind + React Query           │
-│          Azure Static Web Apps (CDN + global routing)        │
-└─────────────────────────┬────────────────────────────────────┘
-                          │ HTTPS / REST
-┌─────────────────────────▼────────────────────────────────────┐
-│                       FastAPI Backend                        │
-│  ┌──────────────┐  ┌─────────────────┐  ┌────────────────┐  │
-│  │  Simulation  │  │  Domain Layer   │  │   AI Layer     │  │
-│  │   Engine     │  │  SimService     │  │  Azure OpenAI  │  │
-│  │  (pure Py,   │  │  SQLAlchemy     │  │  context +     │  │
-│  │   no I/O)    │  │  async bridge   │  │  prompts       │  │
-│  └──────────────┘  └────────┬────────┘  └────────────────┘  │
-│                             │                                │
-│                    ┌────────▼────────┐                       │
-│                    │   PostgreSQL    │                       │
-│                    │  asyncpg +      │                       │
-│                    │  Alembic        │                       │
-│                    └─────────────────┘                       │
-│                Azure Container Apps (containerized)          │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
 
-Infrastructure: Terraform  |  CI/CD: GitHub Actions
+    browser["Client (Browser)<br/>React + Vite + Tailwind + React Query"]
+    swa["Azure Static Web Apps<br/>Global CDN Hosting"]
+    api["FastAPI Backend<br/>Containerized Service"]
+    aca["Azure Container Apps"]
+    engine["Deterministic Simulation Engine<br/>Pure Python · No I/O"]
+    domain["Domain Layer<br/>SimService · SQLAlchemy Async"]
+    ai["AI Interpretation Layer<br/>Azure OpenAI"]
+    db["Azure Database for PostgreSQL<br/>asyncpg · Alembic"]
+    tf["Terraform Infrastructure Modules"]
+    gh["GitHub Actions CI/CD"]
+
+    browser --> swa
+    swa -->|VITE_API_URL / HTTPS REST| api
+    api --> aca
+
+    api --> engine
+    api --> domain
+    api --> ai
+    domain --> db
+
+    ai -->|Env Secrets / API Key| api
+
+    tf --> swa
+    tf --> aca
+    gh --> swa
+    gh --> aca
 ```
 
 ---
 
-### Cloud Portability Strategy
+### Deployment Strategy
 
-The backend is packaged as a **cloud-agnostic container** and deployable to multiple managed compute platforms:
+The platform is deployed live on Azure using containerized infrastructure and environment-driven configuration.
+
+The backend container is cloud-agnostic and designed for reproducible deployment across managed compute platforms. Terraform modules exist for:
 
 - Azure Container Apps *(live deployment)*  
-- Google Cloud Run *(module implemented)*  
-- AWS App Runner / ECS Fargate *(module implemented)*  
+- Google Cloud Run *(infrastructure module implemented)*  
+- AWS App Runner / ECS Fargate *(infrastructure module implemented)*  
 
-Terraform modules abstract environment provisioning, enabling reproducible deployments across providers with minimal configuration drift.
+This allows the system to be redeployed across providers without application code changes.
 
 ---
 
@@ -143,6 +151,16 @@ The platform is designed for production observability:
 - async request lifecycle tracing hooks  
 - future OpenTelemetry integration planned  
 - simulation stage timing metrics for performance analysis  
+
+---
+
+## Production Considerations
+
+- deterministic simulation enables reproducible debugging and replay  
+- AI calls are rate-limited and executed outside the critical simulation path  
+- containerized deployment supports horizontal scaling across worlds  
+- database writes occur after simulation resolution to minimize contention  
+- infrastructure is provisioned via Terraform for environment parity
 
 ---
 
@@ -220,17 +238,12 @@ GET    /api/worlds/{id}/timeline
 
 ## Roadmap
 
-- GCP deployment (Cloud Run + Cloud SQL)  
-- AWS deployment (App Runner / ECS + RDS)  
+## Roadmap
+
 - WebSocket live updates  
 - Parallel simulation workers  
+- Replay mode / historical timeline viewer  
 - Agent personality evolution  
 - Inter-village trade routes  
-- Replay mode  
 - Full OpenTelemetry instrumentation  
-
----
-
-## License
-
-MIT
+- Optional multi-cloud deployment validation
