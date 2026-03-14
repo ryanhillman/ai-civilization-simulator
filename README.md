@@ -28,9 +28,13 @@ The goal was to design a production-shaped platform that demonstrates:
 
 ## Screenshots
 
-| World Dashboard | Agent Panel | Timeline Chronicle |
-|---|---|---|
-| ![World Dashboard](docs/screenshots/world-dashboard.png) | ![Agent Panel](docs/screenshots/agent-panel.png) | ![Timeline](docs/screenshots/timeline.png) |
+### Dashboard
+
+![Dashboard](docs/screenshots/dashboard.png)
+
+### Simulation
+
+![Simulation](docs/screenshots/simulation.png)
 
 ---
 
