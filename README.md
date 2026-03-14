@@ -2,11 +2,6 @@
 
 > A full-stack AI simulation platform where autonomous agents reason, remember, and shape a living medieval village — turn by turn.
 
-[![CI](https://github.com/hillm/ai-civilization-simulator/actions/workflows/ci.yml/badge.svg)](https://github.com/hillm/ai-civilization-simulator/actions)
-[![Azure Static Web Apps](https://img.shields.io/badge/Azure-Live-blue?logo=microsoftazure)](https://thankful-bay-0486ec70f.2.azurestaticapps.net)
-[![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python)](https://python.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript)](https://typescriptlang.org)
-
 ---
 
 ## Live Demo
