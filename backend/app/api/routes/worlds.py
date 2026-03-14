@@ -27,6 +27,15 @@ async def get_world(world_id: int, db: DbSession):
         raise HTTPException(status_code=404, detail=str(exc))
 
 
+@router.delete("/{world_id}")
+async def delete_world(world_id: int, db: DbSession):
+    try:
+        await _svc.delete_world(world_id, db)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    return {"status": "deleted", "world_id": world_id}
+
+
 @router.post("/{world_id}/reset", response_model=WorldResponse)
 async def reset_world(world_id: int, db: DbSession):
     try:
