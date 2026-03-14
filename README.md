@@ -48,7 +48,7 @@ The goal was to design a production-shaped platform that demonstrates:
 
 ## What It Does
 
-Each simulation turn runs a deterministic multi-stage pipeline across every agent in the village. Agents farm, trade, craft, heal, patrol, and die — driven by resource pressure, social relationships, seasonal cycles, and occupational risk.
+Each simulation turn runs a deterministic multi-stage pipeline across every agent in the village. Agents farm, trade, craft, heal, patrol, and die - driven by resource pressure, social relationships, seasonal cycles, and occupational risk.
 
 When high-impact events occur, Azure OpenAI generates narrative responses in the voice of affected agents.
 
