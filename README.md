@@ -238,8 +238,6 @@ GET    /api/worlds/{id}/timeline
 
 ## Roadmap
 
-## Roadmap
-
 - WebSocket live updates  
 - Parallel simulation workers  
 - Replay mode / historical timeline viewer  
