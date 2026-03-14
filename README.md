@@ -1,13 +1,10 @@
 # AI Civilization Simulator
 
 <p align="center">
-
-![Azure](https://img.shields.io/badge/Azure-Container%20Apps-0078D4?logo=microsoftazure&logoColor=white)
-![Terraform](https://img.shields.io/badge/IaC-Terraform-623CE4?logo=terraform&logoColor=white)
-![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white)
-
+  <img src="https://img.shields.io/badge/Azure-Container%20Apps-0078D4?logo=microsoftazure&logoColor=white" />
+  <img src="https://img.shields.io/badge/IaC-Terraform-623CE4?logo=terraform&logoColor=white" />
+  <img src="https://img.shields.io/badge/AI-Azure%20OpenAI-412991" />
 </p>
-
 
 AI Civilization Simulator is a production-shaped full-stack platform that explores how deterministic simulation systems can be augmented with selective large-language-model reasoning without sacrificing reproducibility.
 
