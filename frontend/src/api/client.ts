@@ -32,6 +32,9 @@ export const worldApi = {
 
   reset: (worldId: number) =>
     http.post<World>(`/worlds/${worldId}/reset`).then((r) => r.data),
+
+  delete: (worldId: number) =>
+    http.delete<{ status: string; world_id: number }>(`/worlds/${worldId}`).then((r) => r.data),
 };
 
 // ---------------------------------------------------------------------------
