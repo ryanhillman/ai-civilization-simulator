@@ -10,6 +10,7 @@ interface Props {
   onSelectAgent: (agentId: number) => void;
   selectedAgentId: number | null;
   onResetWorld: () => void;
+  onDeleteWorld: () => void;
 }
 
 function HungerBar({ value }: { value: number }) {
@@ -95,6 +96,7 @@ export default function WorldPanel({
   onSelectAgent,
   selectedAgentId,
   onResetWorld,
+  onDeleteWorld,
 }: Props) {
   const qc = useQueryClient();
 
@@ -173,7 +175,22 @@ export default function WorldPanel({
     },
   });
 
-  const busy = nextTurn.isPending || run5.isPending || autoplay.isPending || reset.isPending;
+  const deleteWorld = useMutation({
+    mutationFn: () => worldApi.delete(worldId),
+    onSuccess: () => {
+      qc.removeQueries({ queryKey: ["lastResult", worldId] });
+      qc.removeQueries({ queryKey: ["world", worldId] });
+      qc.invalidateQueries({ queryKey: ["worlds"] });
+      onDeleteWorld();
+    },
+  });
+
+  const busy =
+    nextTurn.isPending ||
+    run5.isPending ||
+    autoplay.isPending ||
+    reset.isPending ||
+    deleteWorld.isPending;
 
   const displayWorld = lastResult
     ? {
@@ -227,6 +244,17 @@ export default function WorldPanel({
           disabled={busy}
         >
           Reset
+        </button>
+        <button
+          className="btn-danger text-xs"
+          onClick={() => {
+            if (window.confirm(`Delete "${world.name}"? This cannot be undone.`)) {
+              deleteWorld.mutate();
+            }
+          }}
+          disabled={busy}
+        >
+          Delete
         </button>
       </div>
 

@@ -51,6 +51,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY backend/app       ./app
 COPY backend/alembic   ./alembic
 COPY backend/alembic.ini .
+COPY backend/seed      ./seed
 
 # ---- Runtime environment ----
 # PORT   — the port uvicorn binds to.

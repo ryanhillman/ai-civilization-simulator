@@ -35,8 +35,8 @@ vi.mock("@/api/client", () => ({
   },
 }));
 
-const mockAgentApi = client.agentApi as { get: ReturnType<typeof vi.fn> };
-const mockAiApi = client.aiApi as { askAgent: ReturnType<typeof vi.fn> };
+const mockAgentApi = client.agentApi as unknown as { get: ReturnType<typeof vi.fn> };
+const mockAiApi = client.aiApi as unknown as { askAgent: ReturnType<typeof vi.fn> };
 
 function makeAgent(overrides: Partial<AgentDetail> = {}): AgentDetail {
   return {

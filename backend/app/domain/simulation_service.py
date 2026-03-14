@@ -490,6 +490,11 @@ class SimulationService:
             raise ValueError(f"World {world_id} not found")
         return world
 
+    async def delete_world(self, world_id: int, session: AsyncSession) -> None:
+        result = await session.execute(delete(World).where(World.id == world_id))
+        if result.rowcount == 0:
+            raise ValueError(f"World {world_id} not found")
+
     async def create_world(self, name: str, session: AsyncSession) -> World:
         """Create a new world. If name is WORLD_NAME, seed with village data."""
         if name == WORLD_NAME:

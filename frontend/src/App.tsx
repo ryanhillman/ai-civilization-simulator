@@ -26,6 +26,13 @@ function WorldSelector({ onSelect }: { onSelect: (w: World) => void }) {
     },
   });
 
+  const deleteWorld = useMutation({
+    mutationFn: (worldId: number) => worldApi.delete(worldId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["worlds"] });
+    },
+  });
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-6">
       <div className="text-center">
@@ -44,16 +51,26 @@ function WorldSelector({ onSelect }: { onSelect: (w: World) => void }) {
         ) : worlds && worlds.length > 0 ? (
           <div className="space-y-2">
             {worlds.map((w) => (
-              <button
-                key={w.id}
-                className="w-full text-left px-3 py-2 rounded bg-stone-800 hover:bg-stone-700 transition-colors"
-                onClick={() => onSelect(w)}
-              >
-                <div className="text-sm text-stone-200">{w.name}</div>
-                <div className="text-xs text-stone-500">
-                  {w.calendar_date}
-                </div>
-              </button>
+              <div key={w.id} className="flex items-center gap-2">
+                <button
+                  className="flex-1 text-left px-3 py-2 rounded bg-stone-800 hover:bg-stone-700 transition-colors"
+                  onClick={() => onSelect(w)}
+                >
+                  <div className="text-sm text-stone-200">{w.name}</div>
+                  <div className="text-xs text-stone-500">{w.calendar_date}</div>
+                </button>
+                <button
+                  className="btn-danger text-xs px-2 py-1 shrink-0"
+                  disabled={deleteWorld.isPending}
+                  onClick={() => {
+                    if (window.confirm(`Delete "${w.name}"? This cannot be undone.`)) {
+                      deleteWorld.mutate(w.id);
+                    }
+                  }}
+                >
+                  ×
+                </button>
+              </div>
             ))}
           </div>
         ) : (
@@ -121,6 +138,7 @@ function Dashboard({ world, onBack }: { world: World; onBack: () => void }) {
           onSelectAgent={setSelectedAgentId}
           selectedAgentId={selectedAgentId}
           onResetWorld={() => setSelectedAgentId(null)}
+          onDeleteWorld={onBack}
         />
 
         {/* Center column: village map above, chronicle below */}
