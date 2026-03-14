@@ -1,0 +1,31 @@
+# Python
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+backend/.venv/
+backend/tests/
+
+# Node / Frontend (frontend is deployed separately — see README)
+frontend/node_modules/
+frontend/dist/
+frontend/.venv/
+
+# Terraform state (never bake secrets into the image)
+terraform/.terraform/
+terraform/**/*.tfstate
+terraform/**/*.tfstate.backup
+terraform/**/*.tfvars
+
+# Git & editor
+.git/
+.gitignore
+**/.DS_Store
+**/*.swp
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml

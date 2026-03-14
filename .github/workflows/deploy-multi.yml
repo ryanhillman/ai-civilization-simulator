@@ -1,0 +1,226 @@
+# =============================================================================
+# deploy-multi.yml — One-command multi-cloud deployment
+#
+# Trigger: GitHub Actions → "Run workflow" → choose Azure / GCP / AWS
+#
+# Flow:
+#   1. Build the Docker image from the project root Dockerfile.
+#   2. Authenticate with the selected cloud.
+#   3. Push the image to that cloud's container registry.
+#   4. Run `terraform apply -var="target_cloud=<choice>"`.
+#
+# Required GitHub Secrets (set in repo Settings → Secrets → Actions):
+#
+#   All clouds:
+#     TF_VAR_DB_HOST        — managed PostgreSQL endpoint
+#     TF_VAR_DB_PASSWORD    — database password
+#
+#   Azure:
+#     AZURE_CLIENT_ID       — service principal app ID
+#     AZURE_CLIENT_SECRET   — service principal secret
+#     AZURE_TENANT_ID       — AAD tenant ID
+#     AZURE_SUBSCRIPTION_ID — subscription ID
+#     ACR_LOGIN_SERVER      — e.g. myacr.azurecr.io
+#     ACR_USERNAME          — ACR admin username
+#     ACR_PASSWORD          — ACR admin password
+#
+#   GCP:
+#     GCP_SA_KEY            — service account JSON key (base64-encoded)
+#     GCP_PROJECT_ID        — GCP project ID
+#     GAR_LOCATION          — Artifact Registry region, e.g. us-central1
+#
+#   AWS:
+#     AWS_ACCESS_KEY_ID     — IAM access key
+#     AWS_SECRET_ACCESS_KEY — IAM secret key
+#     AWS_ACCOUNT_ID        — 12-digit account ID
+# =============================================================================
+
+name: Deploy — Multi-Cloud
+
+on:
+  workflow_dispatch:
+    inputs:
+      cloud:
+        description: "Target cloud provider"
+        required: true
+        type: choice
+        options:
+          - azure
+          - gcp
+          - aws
+
+env:
+  APP_NAME: ai-civ-sim
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Build Docker image (cloud-agnostic)
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build image
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ env.IMAGE_TAG }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: ${{ env.APP_NAME }}:${{ env.IMAGE_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Export image as tarball
+        run: docker save ${{ env.APP_NAME }}:${{ env.IMAGE_TAG }} | gzip > image.tar.gz
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: image.tar.gz
+          retention-days: 1
+
+  # ---------------------------------------------------------------------------
+  # Push to cloud registry + Terraform apply
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy to ${{ inputs.cloud }}
+    runs-on: ubuntu-latest
+    needs: build
+    environment: ${{ inputs.cloud }}   # maps to GitHub environments for approval gates
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker image
+        run: docker load < image.tar.gz
+
+      # -----------------------------------------------------------------------
+      # Azure — push to ACR, deploy via azurerm provider
+      # -----------------------------------------------------------------------
+      - name: "[Azure] Login to Azure"
+        if: inputs.cloud == 'azure'
+        uses: azure/login@v2
+        with:
+          creds: |
+            {
+              "clientId": "${{ secrets.AZURE_CLIENT_ID }}",
+              "clientSecret": "${{ secrets.AZURE_CLIENT_SECRET }}",
+              "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}",
+              "tenantId": "${{ secrets.AZURE_TENANT_ID }}"
+            }
+
+      - name: "[Azure] Login to ACR"
+        if: inputs.cloud == 'azure'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: "[Azure] Tag & push image"
+        if: inputs.cloud == 'azure'
+        run: |
+          FULL_IMAGE="${{ secrets.ACR_LOGIN_SERVER }}/${{ env.APP_NAME }}:${{ env.IMAGE_TAG }}"
+          docker tag ${{ env.APP_NAME }}:${{ env.IMAGE_TAG }} "$FULL_IMAGE"
+          docker push "$FULL_IMAGE"
+          echo "APP_IMAGE=$FULL_IMAGE" >> $GITHUB_ENV
+
+      # -----------------------------------------------------------------------
+      # GCP — push to Artifact Registry, deploy via google provider
+      # -----------------------------------------------------------------------
+      - name: "[GCP] Authenticate"
+        if: inputs.cloud == 'gcp'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: "[GCP] Configure Docker for Artifact Registry"
+        if: inputs.cloud == 'gcp'
+        run: gcloud auth configure-docker ${{ secrets.GAR_LOCATION }}-docker.pkg.dev --quiet
+
+      - name: "[GCP] Tag & push image"
+        if: inputs.cloud == 'gcp'
+        run: |
+          FULL_IMAGE="${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.APP_NAME }}/api:${{ env.IMAGE_TAG }}"
+          docker tag ${{ env.APP_NAME }}:${{ env.IMAGE_TAG }} "$FULL_IMAGE"
+          docker push "$FULL_IMAGE"
+          echo "APP_IMAGE=$FULL_IMAGE" >> $GITHUB_ENV
+
+      # -----------------------------------------------------------------------
+      # AWS — push to ECR, deploy via aws provider
+      # -----------------------------------------------------------------------
+      - name: "[AWS] Configure credentials"
+        if: inputs.cloud == 'aws'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: "[AWS] Login to ECR"
+        if: inputs.cloud == 'aws'
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: "[AWS] Tag & push image"
+        if: inputs.cloud == 'aws'
+        run: |
+          FULL_IMAGE="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION || 'us-east-1' }}.amazonaws.com/${{ env.APP_NAME }}:${{ env.IMAGE_TAG }}"
+          docker tag ${{ env.APP_NAME }}:${{ env.IMAGE_TAG }} "$FULL_IMAGE"
+          docker push "$FULL_IMAGE"
+          echo "APP_IMAGE=$FULL_IMAGE" >> $GITHUB_ENV
+
+      # -----------------------------------------------------------------------
+      # Terraform (runs for every cloud — only the right module executes)
+      # -----------------------------------------------------------------------
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.7"
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: terraform
+        run: |
+          terraform plan \
+            -var="target_cloud=${{ inputs.cloud }}" \
+            -var="app_image=${{ env.APP_IMAGE }}" \
+            -var="db_host=${{ secrets.TF_VAR_DB_HOST }}" \
+            -var="db_password=${{ secrets.TF_VAR_DB_PASSWORD }}" \
+            -var="azure_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID || '' }}" \
+            -var="gcp_project_id=${{ secrets.GCP_PROJECT_ID || '' }}" \
+            -var="aws_region=${{ vars.AWS_REGION || 'us-east-1' }}" \
+            -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: terraform
+        run: terraform apply -auto-approve tfplan
+
+      - name: Print app URL
+        working-directory: terraform
+        run: |
+          echo "============================================"
+          echo "Deployed to: ${{ inputs.cloud }}"
+          echo "App URL: $(terraform output -raw app_url)"
+          echo "============================================"

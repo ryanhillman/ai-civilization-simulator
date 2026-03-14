@@ -1,0 +1,37 @@
+# Copy this file to terraform.tfvars and fill in real values.
+# Never commit terraform.tfvars — it contains secrets.
+
+# ---- Cloud selector ----
+target_cloud = "azure"   # change to "gcp" or "aws"
+
+# ---- App image (pre-pushed to target cloud registry) ----
+app_image = "myacr.azurecr.io/ai-civ-sim:latest"
+# app_image = "us-central1-docker.pkg.dev/my-gcp-project/ai-civ-sim/api:latest"
+# app_image = "123456789.dkr.ecr.us-east-1.amazonaws.com/ai-civ-sim:latest"
+
+# ---- Database (use a managed PostgreSQL service) ----
+db_host     = "my-postgres.postgres.database.azure.com"
+db_port     = "5432"
+db_user     = "civ_user"
+db_password = "CHANGE_ME"
+db_name     = "civ_db"
+
+# ---- Azure OpenAI (optional — set ai_enabled = "true" to activate) ----
+ai_enabled                   = "false"
+azure_openai_key             = ""
+azure_openai_endpoint        = ""
+azure_openai_deployment_name = "gpt-4o"
+azure_openai_api_version     = "2024-02-01"
+
+# ---- Azure-specific (only needed when target_cloud = "azure") ----
+azure_subscription_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+azure_resource_group  = "ai-civ-sim-rg"
+azure_location        = "eastus"
+
+# ---- GCP-specific (only needed when target_cloud = "gcp") ----
+gcp_project_id = "my-gcp-project"
+gcp_region     = "us-central1"
+
+# ---- AWS-specific (only needed when target_cloud = "aws") ----
+aws_region     = "us-east-1"
+aws_account_id = "123456789012"
