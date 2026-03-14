@@ -30,6 +30,7 @@ jobs:
           app_location: "frontend"
           api_location: ""
           output_location: "dist"
+          app_build_command: "npm run build"
           config_file_location: "frontend"
         env:
           VITE_API_URL: https://aca-civsim-api.livelycoast-caf3a2f0.eastus2.azurecontainerapps.io
