@@ -17,7 +17,7 @@ The system demonstrates modern cloud deployment patterns, domain-driven backend 
 **Frontend:** https://thankful-bay-0486ec70f.2.azurestaticapps.net  
 **API Docs:** https://aca-civsim-api.livelycoast-caf3a2f0.eastus2.azurecontainerapps.io/docs  
 
-> Demo world **“Ashenvale”** is pre-seeded. Run turns, interrogate agents, and watch the village evolve in real time.
+Run simulation turns, interrogate agents, and observe village dynamics evolve in real time.
 
 ---
 
