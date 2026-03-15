@@ -8,7 +8,7 @@
 
 AI Civilization Simulator is a production-oriented platform that explores how deterministic simulation systems can be augmented with selective large-language-model reasoning without sacrificing reproducibility.
 
-The system demonstrates modern cloud deployment patterns, domain-driven backend design, and AI integration as an optional interpretation layer rather than core decision logic.
+The system demonstrates portable cloud deployment patterns and AI integration as an optional interpretation layer rather than core decision logic.
 
 ---
 
@@ -18,19 +18,6 @@ The system demonstrates modern cloud deployment patterns, domain-driven backend 
 **API Docs:** https://aca-civsim-api.livelycoast-caf3a2f0.eastus2.azurecontainerapps.io/docs  
 
 Run simulation turns, interrogate agents, and observe village dynamics evolve in real time.
-
----
-
-## System Overview
-
-This project explores how **deterministic simulation systems can be augmented with selective large-language-model reasoning** without introducing non-determinism into core game logic.
-
-The goal was to design a production-shaped platform that demonstrates:
-
-- cloud-portable backend architecture  
-- testable domain modeling  
-- AI as an optional interpretation layer  
-- full lifecycle deployment using modern platform engineering practices  
 
 ---
 
