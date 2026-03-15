@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/AI-Azure%20OpenAI-412991" />
 </p>
 
-AI Civilization Simulator is a production-shaped full-stack platform that explores how deterministic simulation systems can be augmented with selective large-language-model reasoning without sacrificing reproducibility.
+AI Civilization Simulator is a production-oriented platform that explores how deterministic simulation systems can be augmented with selective large-language-model reasoning without sacrificing reproducibility.
 
 The system demonstrates modern cloud deployment patterns, domain-driven backend design, and AI integration as an optional interpretation layer rather than core decision logic.
 
