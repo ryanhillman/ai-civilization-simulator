@@ -103,6 +103,19 @@ This approach allows the system to be redeployed across cloud providers without 
 
 ---
 
+### Runtime Characteristics
+
+The Azure deployment is designed to keep cloud costs efficient during active development.
+
+- Backend APIs run on Azure Container Apps and scale to zero when inactive  
+- Frontend assets are served through Azure Static Web Apps  
+- PostgreSQL uses a lightweight burstable configuration sized for development traffic  
+- AI features are only triggered during relevant simulation events  
+
+This approach keeps the platform responsive and production-oriented without requiring large amounts of always-running infrastructure.
+
+---
+
 ## Simulation Engine
 
 The engine is a **pure Python deterministic pipeline** — no database, no async, no I/O.
@@ -140,20 +153,20 @@ Azure OpenAI acts as a **selective interpretation layer**.
 
 The platform is designed for production observability:
 
-- structured logging at domain boundaries  
-- async request lifecycle tracing hooks  
-- future OpenTelemetry integration planned  
-- simulation stage timing metrics for performance analysis  
+- Structured logging at domain boundaries  
+- Async request lifecycle tracing hooks  
+- Future OpenTelemetry integration planned  
+- Simulation stage timing metrics for performance analysis  
 
 ---
 
 ## Production Considerations
 
-- deterministic simulation enables reproducible debugging and replay  
+- Deterministic simulation enables reproducible debugging and replay  
 - AI calls are rate-limited and executed outside the critical simulation path  
-- containerized deployment supports horizontal scaling across worlds  
-- database writes occur after simulation resolution to minimize contention  
-- infrastructure is provisioned via Terraform for environment parity
+- Containerized deployment supports horizontal scaling across worlds  
+- Database writes occur after simulation resolution to minimize contention  
+- Infrastructure is provisioned via Terraform for environment parity
 
 ---
 
