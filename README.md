@@ -103,7 +103,7 @@ This approach allows the system to be redeployed across cloud providers without 
 
 ---
 
-### Infrastructure Characteristics
+### Infrastructure Strategy
 
 The Azure deployment is designed to keep cloud costs efficient during active development.
 
