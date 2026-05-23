@@ -14,7 +14,7 @@ The system demonstrates portable cloud deployment patterns and AI integration as
 
 ## Demo
 
-https://youtu.be/0o1W8rwwVts
+https://youtu.be/K2EhfHuh8Iw
 
 ---
 
