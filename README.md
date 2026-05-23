@@ -12,24 +12,9 @@ The system demonstrates portable cloud deployment patterns and AI integration as
 
 ---
 
-## Live Demo
+## Demo
 
-**Frontend:** https://thankful-bay-0486ec70f.2.azurestaticapps.net  
-**API Docs:** https://aca-civsim-api.livelycoast-caf3a2f0.eastus2.azurecontainerapps.io/docs  
-
-Run simulation turns, interrogate agents, and observe village dynamics evolve in real time.
-
----
-
-## Screenshots
-
-### Dashboard
-
-![Dashboard](docs/screenshots/dashboard.png)
-
-### Simulation
-
-![Simulation](docs/screenshots/simulation.png)
+(https://youtu.be/0o1W8rwwVts)
 
 ---
 
