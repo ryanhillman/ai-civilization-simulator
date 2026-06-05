@@ -76,15 +76,9 @@ flowchart TB
 
 ### Deployment Strategy
 
-The platform is currently deployed on Azure using containerized infrastructure, managed PostgreSQL, and environment-driven runtime configuration.
+The platform was deployed on Azure using containerized infrastructure, managed PostgreSQL, and environment-driven runtime configuration.
 
-The backend service is packaged as a cloud-agnostic container and provisioned via Terraform modules, enabling reproducible deployments across managed compute platforms. Infrastructure modules exist for:
-
-- Azure Container Apps *(active deployment)*  
-- Google Cloud Run *(validated module)*  
-- AWS App Runner / ECS Fargate *(validated module)*  
-
-This approach allows the system to be redeployed across cloud providers without application code changes while keeping operational complexity and cost controlled during development.
+The backend service is packaged as a cloud-agnostic container and provisioned via Terraform modules, enabling reproducible deployments across managed compute platforms.
 
 ---
 
